@@ -1,4 +1,4 @@
 BlenderPython
 =============
 
-storing blender ralated python scripts
+storing blender related python scripts
