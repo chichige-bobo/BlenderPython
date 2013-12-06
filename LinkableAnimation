@@ -1,13 +1,21 @@
 import bpy
 
-armatureObjectName = 'Armature'
-boneName_const = 'TransformController'
-boneName_vis = 'VisibilityController' #set this if you use addVisDriverOp
+
+class PreparedValueProps(bpy.types.PropertyGroup):
+    armatureObjectName = bpy.props.StringProperty(name="ArmaObjName", default='Armature', description="Name of Armature Object which contains controll bone")
+    boneName_const = bpy.props.StringProperty(name="TransController", default='TransformController', description="Name of a Bone which becomes the Target of ActionConstraint")
+    boneName_vis = bpy.props.StringProperty(name="VisController", default='VisibilityController', description="Name of a Bone which Controls Visibility via Driver") #if not use this function, no need to set
+    
+    action_frameStart = bpy.props.IntProperty(name="StartFrame", default=1, description="Start frame designated in ActionConstraint")
+    action_frameEnd = bpy.props.IntProperty(name="EndFrame", default=100, description="End frame designated in ActionConstraint")
+
 
 #################################################################
-# Add new ActionConstraint named 'TransformAction' to selected objects
-# Unlink the action from the objects to avoid dual effect.
-# Clear location, rotation, size which controled by the action.
+# What this operator do...
+# 1. Add new ActionConstraint named 'TransformAction' to selected objects
+# 2. Unlink the action from the objects to avoid dual effect.
+# 3. Clear location, rotation, size which controled by the action.
+#  
 # You MUST prepare Armature and set its name.
 #
 class ChangeToActionConstraintOperator(bpy.types.Operator):
@@ -22,11 +30,20 @@ class ChangeToActionConstraintOperator(bpy.types.Operator):
                 len(context.selected_objects) > 0 )
 
     def execute(self, context):
+    
+        armatureObjectName = context.scene.linkAnimProps.armatureObjectName
+        boneName_const = context.scene.linkAnimProps.boneName_const
         
-        global armatureObjectName
-        global boneName_const
-         
-        # validation---------------        
+        action_frameStart = context.scene.linkAnimProps.action_frameStart
+        action_frameEnd = context.scene.linkAnimProps.action_frameEnd
+                
+        # validation---------------
+        if armatureObjectName.strip() == '':
+            return self.abort('Armature object name is not correct')
+
+        if boneName_const.strip() == '':
+            return self.abort('Name of Tranfom controller bone is not correct')
+                
         if not armatureObjectName in bpy.data.objects.keys():
             return self.abort(armatureObjectName + ' was not found')
 
@@ -57,8 +74,8 @@ class ChangeToActionConstraintOperator(bpy.types.Operator):
             cnst.action = bpy.data.actions[obj.animation_data.action.name]
             cnst.min = 0
             cnst.max = 3
-            cnst.frame_start = 1
-            cnst.frame_end = 100
+            cnst.frame_start = action_frameStart
+            cnst.frame_end = action_frameEnd
             
             # detouch action and clear values which is in the action
             # this section below doesn't care about delta transform. sorry.
@@ -100,11 +117,20 @@ class UpdateValuesOfTransformActionConstraintOperator(bpy.types.Operator):
 
     def execute(self, context):
         
-        global armatureObjectName
-        global boneName_const
-         
+        armatureObjectName = context.scene.linkAnimProps.armatureObjectName
+        boneName_const = context.scene.linkAnimProps.boneName_const
+                 
+        action_frameStart = context.scene.linkAnimProps.action_frameStart
+        action_frameEnd = context.scene.linkAnimProps.action_frameEnd
+
         # validation---------------
-        # this op is maintenance purpose. so, not strictly restricted       
+        # this op is maintenance purpose. so, not strictly restricted 
+        if armatureObjectName.strip() == '':
+            return self.abort('Armature object name is not correct')
+
+        if boneName_const.strip() == '':
+            return self.abort('Name of Tranfom controller bone is not correct')
+                
         if not armatureObjectName in bpy.data.objects.keys():
             return self.abort(armatureObjectName + ' was not found')
 
@@ -129,8 +155,8 @@ class UpdateValuesOfTransformActionConstraintOperator(bpy.types.Operator):
                     #cnst.action = bpy.data.actions[obj.name + 'Action']
                     cnst.min = 0
                     cnst.max = 5
-                    cnst.frame_start = 1
-                    cnst.frame_end = 100
+                    cnst.frame_start = action_frameStart
+                    cnst.frame_end = action_frameEnd
                     
         return {'FINISHED'}
 
@@ -154,7 +180,7 @@ class RestoreTransformActionConstraintToLinkedActionOperator(bpy.types.Operator)
     def execute(self, context):
         
         # validation---------------        
-        # this op is maintenance purpose. so, not strictly restricted       
+        # this op is maintenance purpose. so, not strictly restricted                       
         if len(context.selected_objects) == 0:
             return self.abort('Nothing selected')
         
@@ -184,8 +210,8 @@ class RestoreTransformActionConstraintToLinkedActionOperator(bpy.types.Operator)
 # Connect a bone as driver to selected objects.
 # Subject properties are Eye icon and Camera icon in Outliner.
 # If the object already has visibility driver, this op modifies it.
-# If the driver has GENERATOR modifier on slot 0, the mod deleted
-#  (the mod automatically added by driver_add(). If the driver added through IDE, no modefier is added)
+# If the driver has GENERATOR modifier on slot 0, the mod will get deleted
+#  (the mod automatically added by driver_add(). If the driver added through GUI, no modefier is added)
 #
 class AddVisibilityDriverOperator(bpy.types.Operator):
     """Connect a Bone as Driver to Selected Objects"""
@@ -201,11 +227,17 @@ class AddVisibilityDriverOperator(bpy.types.Operator):
 
     def execute(self, context):
         
-        global armatureObjectName
-        global boneName_vis
+        armatureObjectName = context.scene.linkAnimProps.armatureObjectName
+        boneName_vis = context.scene.linkAnimProps.boneName_vis
         
         # validation---------------
         
+        if armatureObjectName.strip() == '':
+            return self.abort('Armature object name is not correct')
+
+        if boneName_vis.strip() == '':
+            return self.abort('Name of Visibility controller bone is not correct')
+                
         isError = False
         armaObj = bpy.data.objects[armatureObjectName]
         if not armaObj:
@@ -226,16 +258,13 @@ class AddVisibilityDriverOperator(bpy.types.Operator):
         # execute ------------------ 
         
         for obj in context.selected_objects:           
-            self.setDriverToFCurve(obj.driver_add('hide')) #probably driver_add() is singleton in my experiment.
-            self.setDriverToFCurve(obj.driver_add('hide_render')) 
+            self.setDriverToFCurve(obj.driver_add('hide'), armatureObjectName, boneName_vis) #probably driver_add() is singleton in my experiment.
+            self.setDriverToFCurve(obj.driver_add('hide_render'), armatureObjectName, boneName_vis) 
         
         return {'FINISHED'}
     
     
-    def setDriverToFCurve(self, fcrv):
-
-        global armatureObjectName
-        global boneName_vis
+    def setDriverToFCurve(self, fcrv, armatureObjectName, boneName_vis):
 
         drv = fcrv.driver
         if len(drv.variables) == 0:
@@ -276,6 +305,7 @@ class RemoveVisibilityDriverOperator(bpy.types.Operator):
     def execute(self, context):
  
         # validation---------------
+        # out of types means set by other way.
         allowedTypes = ['MESH', 'CURVE', 'SURFACE', 'META', 'FONT', 'LAMP']
         for obj in context.selected_objects:
             if not obj.type in allowedTypes:
@@ -306,13 +336,24 @@ class LinkableAnimationPanel(bpy.types.Panel):
         layout = self.layout
 
         col = layout.column()
-        col.label('Main Operation :')
+        col.label('--- Properties -----------------------')
+        col.prop(context.scene.linkAnimProps, 'armatureObjectName')
+        col.prop(context.scene.linkAnimProps, 'boneName_const')
+        col.prop(context.scene.linkAnimProps, 'boneName_vis')
+        col.separator()
+        row = col.row(align = True)
+        row.prop(context.scene.linkAnimProps, 'action_frameStart')
+        row.prop(context.scene.linkAnimProps, 'action_frameEnd')
+        col.separator()
+        
+        #col.prop("object.change_to_action_constraint_operator", 'armaObjName')
+        col.label('--- Main Operation -------------------')
         col.label('parent to root bone before change to')
         col.operator('object.change_to_action_constraint_operator', text='Change To Constrinat', icon = 'CONSTRAINT')
         col.operator('object.add_visibility_driver_operator', text = 'Add Visibility Driver', icon = 'DRIVER')
 
         col = layout.column(align=True)
-        col.label('Maintenance :')
+        col.label('--- Maintenance ----------------------')
         col.operator('object.update_values_of_action_constraint_operator', text = 'Update Constraints', icon = 'CONSTRAINT_DATA')
         col.operator('object.restore_transform_action_const_to_linked_operator', text = 'Restore Action', icon = 'ACTION')
         
@@ -320,7 +361,10 @@ class LinkableAnimationPanel(bpy.types.Panel):
         col.operator('object.remove_visibility_driver_operator', text = 'Remove Vis Driver', icon = 'PANEL_CLOSE')
 
 
-def register():
+def register():    
+    bpy.utils.register_class(PreparedValueProps)
+    bpy.types.Scene.linkAnimProps = bpy.props.PointerProperty(type=PreparedValueProps)
+    
     bpy.utils.register_class(AddVisibilityDriverOperator)
     bpy.utils.register_class(RemoveVisibilityDriverOperator)
     bpy.utils.register_class(ChangeToActionConstraintOperator)
