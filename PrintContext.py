@@ -19,7 +19,7 @@ bl_info = {
 # to access this operator. 
 #
 # Note about Area.spaces : if user changes area type, it is appended to the spaces.
-# e.g. If user changes 3DView to Outliner, the spaces become [0] = 3DView, [1] = Outliner.
+# e.g. If user changes 3DView to Outliner, the spaces become [0] = Outliner, [1] = 3DView.
 # So, this addon doesn't care it
 ###########################################################################
 
@@ -204,11 +204,11 @@ class PrintContextOperator_Area(PrintContextOperator_Base):
             print(' | | C.space_data.dopesheet.show_textures =    ', sd.dopesheet.show_textures)
         elif sd.type == 'NODE_EDITOR':
             print(' | C.space_data.backdrop_zoom = ', sd.backdrop_zoom)
-            print(' | C.space_data.edit_tree = ', sd.edit_tree)
-            print(' | C.space_data.node_tree = ', sd.node_tree)
-            print(' | C.space_data.shader_type = ', sd.shader_type)
-            print(' | C.space_data.texture_type = ', sd.texture_type)
-            print(' | C.space_data.tree_type = ', sd.tree_type)
+            print(' | C.space_data.edit_tree =     ', self.refine(sd.edit_tree))
+            print(' | C.space_data.node_tree =     ', self.refine(sd.node_tree))
+            print(' | C.space_data.shader_type =   ', sd.shader_type)
+            print(' | C.space_data.texture_type =  ', sd.texture_type)
+            print(' | C.space_data.tree_type =     ', sd.tree_type)
        
         print('')
         print(' C.region =      ', self.refine(context.region))
@@ -237,7 +237,7 @@ class PrintContextOperator_Area(PrintContextOperator_Base):
             for i in range(len(areas)):
                 if areas[i] == context.area:
                     break
-            consoleText = 'C.screen.areas[' + str(i) + '].' 
+            consoleText = 'C.screen.areas[' + str(i) + '].spaces[0]' 
             print(" Use '" + consoleText + "' to test props at Console")
          
         context.window_manager.clipboard = consoleText
@@ -268,4 +268,3 @@ def unregister():
     
 if __name__ == "__main__":
     register()
-       
