@@ -237,7 +237,7 @@ class PrintContextOperator_Area(PrintContextOperator_Base):
             for i in range(len(areas)):
                 if areas[i] == context.area:
                     break
-            consoleText = 'C.screen.areas[' + str(i) + '].spaces[0]' 
+            consoleText = 'C.screen.areas[' + str(i) + '].spaces.active.' 
             print(" Use '" + consoleText + "' to test props at Console")
          
         context.window_manager.clipboard = consoleText
@@ -267,4 +267,4 @@ def unregister():
     bpy.types.TEXT_MT_view.remove(menu_func)
     
 if __name__ == "__main__":
-    register()
+    register() 
