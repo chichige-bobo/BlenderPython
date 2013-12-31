@@ -4,7 +4,7 @@ bl_info = {
     "version": (1, 0),
     "blender": (2, 69, 0),
     "location": "NodeEditor > Shift+PLUS/MINUS , (InternalRenderer) Properties > Texture > Shift+PLUS/MINUS",
-    "description": "Cycle through blend type (and other properties)",
+    "description": "Cycle through blend type of MixRGB Node (and some nodes) like Photoshop",
     "warning": "",
     "wiki_url": "",
     "tracker_url": "",
