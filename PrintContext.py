@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Print Context",
     "author": "chichige-bobo",
-    "version": (1, 0),
+    "version": (1, 1),
     "blender": (2, 69, 0),
     "location": "SpaceBar > 'Print Context', PythonConsole > Console > Print Context, TextEditor > View > Print Context",
     "description": "Print Context Info to the System Console",
@@ -46,13 +46,14 @@ class PrintContextOperator_General(PrintContextOperator_Base):
     def execute(self, context):
         print('\n--------------- Context Info - General ---------------------')
         print(' len(C.window_manager.windows) = ', len(context.window_manager.windows))
-        print(' C.window_manager = ', self.refine(context.window_manager))
-        print(' C.window =       ' , self.refine(context.window))
-        print(' C.window.id_data=' , context.window.id_data)
-        print(' C.window.screen =' , self.refine(context.window.screen))
-        print(' C.screen =       ' , self.refine(context.screen))
-        print(' C.scene =        ' , self.refine(context.scene))
-        print(' C.mode =         ' , context.mode)
+        print(' C.window_manager =    ', self.refine(context.window_manager))
+        print(' C.window =            ' , self.refine(context.window))
+        print(' C.window.id_data=     ' , context.window.id_data)
+        print(' C.window.screen =     ' , self.refine(context.window.screen))
+        print(' C.mode =              ' , context.mode)
+        print(' C.scene =             ' , self.refine(context.scene))
+        print(' C.scene.render.engine=' , self.refine(context.scene.render.engine))
+        print(' C.screen =            ' , self.refine(context.screen))
         self.printScreenAreas(context.screen.areas)
         print('--------------')
         print(' C.object =         ', self.refine(context.object))
@@ -104,13 +105,48 @@ class PrintContextOperator_Area(PrintContextOperator_Base):
     bl_label = "Print Context - Area"
 
     def execute(self, context):
+        sd = context.space_data
         print('\n--------------- Context Info - Area ---------------------')
         print(' (Below is just a bit of props. See the reference to explore more.)')
         print('')
-        print(' C.mode =          ', self.refine(context.mode))
+        print(' C.mode = ', self.refine(context.mode))
+        if sd.type == 'PROPERTIES':
+            print(' C.world =          ', self.refine(context.world))
+            print(' C.lattice =        ', self.refine(context.lattice))
+            print(' C.curve =          ', self.refine(context.curve))
+            print(' C.meta_ball =      ', self.refine(context.meta_ball))
+            print(' C.lamp =           ', self.refine(context.lamp))
+            print(' C.material_slot =  ', self.refine(context.material_slot))
+            print(' C.texture =        ', self.refine(context.texture))
+            if sd.context != 'PARTICLES' and hasattr(context, 'texture_slot'):# Blender2.69 fails when PARTICLE 
+                print(' C.texture_slot =   ', self.refine(context.texture_slot))
+            else:#when Brush
+                print(' C.texture_slot =   ', "'Context' object has no attribute 'textre_slot'")
+            print(' C.texture_user =   ', self.refine(context.texture_user))
+            print(' C.bone =           ', self.refine(context.bone))
+            print(' C.edit_bone =      ', self.refine(context.edit_bone))
+            print(' C.pose_bone =      ', self.refine(context.pose_bone))
+            print(' C.particle_system =', self.refine(context.particle_system))
+            print(' C.cloth =          ', self.refine(context.cloth))
+            print(' C.brush =          ', self.refine(context.brush))
+            print(' (See bpy.context doc for more)')
+        elif sd.type == 'IMAGE_EDITOR':
+            print(' C.edit_image = ', self.refine(context.edit_image))
+            print(' C.ecit_mask =  ', self.refine(context.edit_mask))
+        elif sd.type == 'NODE_EDITOR':
+            print(' C.active_node =         ', self.refine(context.active_node))
+            print(' len(C.selected_nodes) = ', len(context.selected_nodes))
+        elif sd.type == 'TEXT_EDITOR':
+            print(' C.edit_text = ', self.refine(context.edit_text))
+        elif sd.type == 'CLIP_EDITOR':
+            print(' C.edit_movieclip = ', self.refine(context.edit_movieclip))
+            print(' C.edit_mask =      ', self.refine(context.edit_mask))
+        elif sd.type == 'SEQUENCE_EDITOR':
+            print(' C.edit_mask = ', self.refine(context.edit_mask))
+                        
+        print('')
         print(' C.space_data =    ', self.refine(context.space_data))
         print(' C.space_data.type=', self.refine(context.space_data.type))
-        sd = context.space_data
         if sd.type == 'SEQUENCE_EDITOR':
             print(' | C.space_data.display_mode = ', sd.display_mode)
             print(' | C.space_data.overlay_type = ', sd.overlay_type) 
@@ -177,12 +213,12 @@ class PrintContextOperator_Area(PrintContextOperator_Base):
             print(' | C.space_data.show_uvedit =   ', sd.show_uvedit)
             print(' | C.space_data.image_user =    ', self.refine(sd.image_user))
             print(' | | C.space_data.image_user.frame_offset = ', sd.image_user.frame_offset)
-            print(' | | C.space_data.image_user.use_cyclic = ', sd.image_user.use_cyclic)
+            print(' | | C.space_data.image_user.use_cyclic =   ', sd.image_user.use_cyclic)
             print(' | C.space_data.uv_editor =     ', self.refine(sd.uv_editor))
-            print(' | | C.space_data.uv_editor.edge_draw_type = ', sd.uv_editor.edge_draw_type)
-            print(' | | C.space_data.uv_editor.show_other_objects = ', sd.uv_editor.show_other_objects)
-            print(' | | C.space_data.uv_editor.sticky_select_mode = ', sd.uv_editor.sticky_select_mode)
-            print(' | | C.space_data.uv_editor.use_snap_to_pixels = ', sd.uv_editor.use_snap_to_pixels)
+            print(' | | C.space_data.uv_editor.edge_draw_type =    ', sd.uv_editor.edge_draw_type)
+            print(' | | C.space_data.uv_editor.show_other_objects =', sd.uv_editor.show_other_objects)
+            print(' | | C.space_data.uv_editor.sticky_select_mode =', sd.uv_editor.sticky_select_mode)
+            print(' | | C.space_data.uv_editor.use_snap_to_pixels =', sd.uv_editor.use_snap_to_pixels)
         elif sd.type == 'FILE_BROWSER':
             print(' | C.space_data.active_operator=', sd.active_operator)
             print(' | C.space_data.operator       = ', sd.operator)
@@ -219,6 +255,21 @@ class PrintContextOperator_Area(PrintContextOperator_Base):
         print(' C.area =         ', self.refine(context.area))
         print(' C.area.type =    ', self.refine(context.area.type))
         self.printAreaRegions(context.area.regions)
+        print('')
+        if sd.type == 'NODE_EDITOR':
+            print(' Some hints-------------')
+            print('   Belows point identical object')
+            print('     context.active_node')
+            print('     context.area.spaces.active.node_tree.nodes.active')
+            print('     context.active_object.active_material.node_tree.nodes.active') 
+            print('     (node_tree is None until .use_nodes becomes True)')
+            print('')
+            print("   difNode = node_tree.nodes.new(type = 'ShaderNodeBsdfDiffuse')")
+            print("   outNode = node_tree.nodes.new(type = 'ShaderNodeBsdfDiffuse')")
+            print("   outNode.location.x = 300")
+            print("   node_tree.links.new(difNode.outputs['BSDF'], outNode.inputs['Surface'])")
+            print(' -----------------------')
+            
         print('')
         self.printConsoleCompatibleAreaIndex(context)
         return {'FINISHED'}
