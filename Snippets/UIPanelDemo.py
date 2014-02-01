@@ -201,10 +201,12 @@ class UIPanelDemo_Layout(bpy.types.Panel):
         col.operator(DoNothingOp.bl_idname, text = 'Op5')
         col.operator(DoNothingOp.bl_idname, text = 'Op6')
         col.operator(DoNothingOp.bl_idname, text = 'Op7')
+        
         layout.label('Box ---------------------------')
         box = layout.box()
         box.operator(DoNothingOp.bl_idname, text = 'Operator')
         box.operator(DoNothingOp.bl_idname, text = 'Operator')
+        
         layout.label('Split -------------------------')
         spl = layout.split()
         col = spl.column()
@@ -231,6 +233,7 @@ class UIPanelDemo_Layout(bpy.types.Panel):
         spl.operator(DoNothingOp.bl_idname, text = 'Operator')
         spl.operator(DoNothingOp.bl_idname, text = 'Operator')
         spl.operator(DoNothingOp.bl_idname, text = 'Operator')
+        
         layout.label('Split(0.8) --------------------')
         spl = layout.split(0.8)
         spl.operator(DoNothingOp.bl_idname, text = 'Operator')
@@ -239,31 +242,53 @@ class UIPanelDemo_Layout(bpy.types.Panel):
         spl.operator(DoNothingOp.bl_idname, text = 'Operator')
         col = layout.column()
         col.scale_x = col.scale_y = 2
+        
         col.label('Column (scale_x,_y = 2) ---------')
         col.operator(DoNothingOp.bl_idname, text = 'Operator')
         col.operator(DoNothingOp.bl_idname, text = 'Operator')
         col = layout.column()
         col.scale_x = 0.5
-        col.alignment = 'LEFT'
-        col.label('Column (scale_x = 0.5 & LEFT alignment) -------')
+        col.label('Column (scale_x = 0.5) -------')
         col.operator(DoNothingOp.bl_idname, text = 'Operator')
         col.operator(DoNothingOp.bl_idname, text = 'Operator')
+        
         layout.label('Row --------------------------')
         row = layout.row()
         row.operator(DoNothingOp.bl_idname, text = 'Operator')
         row.operator(DoNothingOp.bl_idname, text = 'Operator')
         row.operator(DoNothingOp.bl_idname, text = 'Operator')
+
         layout.label('Another Row --------------------------')
         row = layout.row()
         row.operator(DoNothingOp.bl_idname, text = 'Operator')
         row.operator(DoNothingOp.bl_idname, text = 'Operator')
         col = row.column()
+
         col.label('Col in Row --------------------------')
         col.operator(DoNothingOp.bl_idname, text = 'Operator')
         col.operator(DoNothingOp.bl_idname, text = 'Operator')
         row.operator(DoNothingOp.bl_idname, text = 'Operator')
 
+        layout.label('Row w/ Left alignment ----------------')
+        row = layout.row()
+        row.alignment = 'LEFT'
+        row.operator(DoNothingOp.bl_idname, text = 'Op1')
+        row.operator(DoNothingOp.bl_idname, text = 'Op2')
+        row.operator(DoNothingOp.bl_idname, text = 'Op3')
 
+        layout.label('Row w/ Center alignment ----------------')
+        row = layout.row()
+        row.alignment = 'CENTER'
+        row.operator(DoNothingOp.bl_idname, text = 'Op1')
+        row.operator(DoNothingOp.bl_idname, text = 'Op2')
+        row.operator(DoNothingOp.bl_idname, text = 'Op3')
+
+        layout.label('Row w/ Right alignment ----------------')
+        row = layout.row()
+        row.alignment = 'RIGHT'
+        row.operator(DoNothingOp.bl_idname, text = 'Op1')
+        row.operator(DoNothingOp.bl_idname, text = 'Op2')
+        row.operator(DoNothingOp.bl_idname, text = 'Op3')
 
             
 ##############################################################################################
@@ -722,7 +747,6 @@ class UIPanelDemo_Misc(bpy.types.Panel):
 
 # Registration---------------------------------------------
 def register():
-    
     bpy.utils.register_class(DoNothingOp)    
     bpy.utils.register_class(UIPanelDemo_Layout)
     bpy.utils.register_class(UIPanelDemo_Props)
