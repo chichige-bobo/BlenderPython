@@ -1,7 +1,8 @@
+#top
 bl_info = {
     "name": "Addon Template Generator",
     "author": "chichige-bobo",
-    "version": (0, 8),
+    "version": (0, 8, 5),
     "blender": (2, 69, 0),
     "location": "TextEditor > Templates > AddonTemplateGenerator, TextEditor > PropertiesBar > AddSnippet",
     "description": "Generate empty addon template. Add snippet of propertes and samples",
@@ -78,7 +79,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
     isUseMenuFunc = BoolProperty(name = 'Add Menu Function', default = False)
     isUseKeymap = BoolProperty(name='Add Keymapping', default = False )
     
-    #========================================
+    #=AddonTempGen execute=======================================
     def execute(self, context):
         txt = ""
         txt += "" if not self.isUseGPLNotice else txt_GPL
@@ -166,7 +167,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self, width = 400, height=500) # returns {'RUNNING_MODAL'} and calls execute() when 'OK' button is pressed
     
-    #====================================            
+    #= AddonTempGen draw =================            
     def draw(self, context):
         layout = self.layout
         row = layout.row()
@@ -386,7 +387,7 @@ class AddSnippetOp_Samples(bpy.types.Operator):
             if pps.snippetSample == "Register":
                 txt += txt_reg % (temp1, temp2)
             else:
-                txt += txt_reg_keymap % (temp1, txt_className, temp2)
+                txt += txt_reg_keymap % (temp1, 'SampleOperator', temp2)
             
         elif pps.snippetSample == "GPL":
             txt = txt_GPL
@@ -405,7 +406,53 @@ class AddSnippetOp_Samples(bpy.types.Operator):
 
 
 ####################################################################################        
+#TODO: UILayout method sample
+#TODO : Clear all, def, full Button
+class BookmarkOp(bpy.types.Operator):
+    """ToolTip"""
+    bl_idname = "addongen.sample_operator"
+    bl_label = "Sample Operator"
+    bl_options = {'REGISTER'}
 
+    type = StringProperty()
+    bmText = StringProperty()
+    removeID = IntProperty()
+    
+    def execute(self, context):
+        pps = context.scene.chichige_add_snippet_props
+        
+        if self.type == "ADD":
+            pps.bookmarks.add()
+        elif self.type == "REMOVE":
+            pps.bookmarks.remove(self.removeID)
+        elif self.type == "GO":
+            sd = context.space_data
+            findText= sd.find_text
+            matchCase = sd.use_match_case
+            findAll = sd.use_find_all
+            findWrap = sd.use_find_wrap
+            
+            sd.find_text = self.bmText
+            sd.use_match_case = False
+            sd.use_find_all = False
+            sd.use_find_wrap = True
+            try:           
+                bpy.ops.text.find()
+            except RuntimeError as e:
+                if not str(e).startswith("Error: Text not found:"):
+                    raise e
+                else:
+                    self.report({'WARNING'}, "Bookmark text not found")
+            finally:
+                sd.find_text = findText
+                sd.use_match_case = matchCase
+                sd.use_find_all = findAll
+                sd.use_find_wrap = findWrap          
+        
+        return {'FINISHED'}
+    
+
+####################################################################################
 class AddSnippetPanel(bpy.types.Panel):
     """ToolTip of AddonTemplatePanel"""
     bl_idname = "TEXTEDITOR_PT_add_snippet_panel"
@@ -419,55 +466,59 @@ class AddSnippetPanel(bpy.types.Panel):
         pps = context.scene.chichige_add_snippet_props
         
         layout.prop(pps, 'isClipboard')
-        box = layout
-        box.label('Properties' + '-' * 80)
-        subBox = box.box()
-        row = subBox.row()
+        layout.label('Properties' + '-' * 80)
+        col = layout.column(align = True)
+        box = col.box()
+        row = box.row()
         row.prop(pps, 'isAddRefComment')
         row.prop(pps, 'isAddPrefix')
         row.prop(pps, 'isAddName')
-        row = subBox.row()
+        row = box.row()
         row.prop(pps, 'isAddDesc')
         row.prop(pps, 'isAddDefault')
         row.prop(pps, 'isAddUpdate')
-        row = subBox.row()
+        
+        row = col.box().row()
         row.prop(pps, 'isAddMinMax')
         row.prop(pps, 'isAddSoftMinMax')
         row.prop(pps, 'isAddStep')
         row.prop(pps, 'isAddSize')
-        split = subBox.split(0.18)
+        
+        box = col.box()
+        split = box.split(0.18)
         split.label('options')   
         row = split.row()
         row.prop(pps, 'propOptions')
-        split = subBox.split(0.18)
+        split = box.split(0.18)
         split.label('subtype')   
         row = split.row()
         row.prop(pps, 'propSubtype', text="")
         row.prop(pps, 'propVecSubtype', text="")
         
-        split = box.split()
+        #--------
+        split = layout.split()
         row = split.row(align = True)
         row.operator(AddSnippetOp_Props.bl_idname, text = "Bool").type = 'Bool'
         row.operator(AddSnippetOp_Props.bl_idname, text = "BoolVec").type = 'BoolVector'
         row = split.row(align = True)
         row.operator(AddSnippetOp_Props.bl_idname, text = "Int").type = 'Int'
         row.operator(AddSnippetOp_Props.bl_idname, text = "IntVec").type = 'IntVector'
-        row = box.row(align = True)
+        row = layout.row(align = True)
         row.prop(pps, 'isAddFloatPrec')     
         row.prop(pps, 'floatUnit', text = "")
         row.operator(AddSnippetOp_Props.bl_idname, text = "Float").type = 'Float'
         row.operator(AddSnippetOp_Props.bl_idname, text = "FloatVec").type = 'FloatVector'
-        row = box.row(align = True)
+        row = layout.row(align = True)
         row.prop(pps, 'stringSubtype', text = "")
         row.operator(AddSnippetOp_Props.bl_idname, text = "String").type = 'String'
-        split = box.split(0.5)
+        split = layout.split(0.5)
         row = split.row(align = True)
         row.prop(pps, 'isAddEnumFlag')
         row.operator(AddSnippetOp_Props.bl_idname, text = "Enum").type = 'Enum'
         split.operator(AddSnippetOp_Props.bl_idname, text = "Collection").type = 'Collection'
         split.operator(AddSnippetOp_Props.bl_idname, text = "Pointer").type = 'Pointer'
         
-        
+        #-----------
         layout.label('CodeSamples' + '-' * 80)
         split = layout.split(0.85)
         split.prop(pps, 'snippetSample', text="")
@@ -478,9 +529,45 @@ class AddSnippetPanel(bpy.types.Panel):
         row = split.row()
         row.enabled = pps.snippetSample == 'PanelClass'
         row.prop(pps, "panelSpaceRegion", text = "PanelSpace")
-        
+ 
+        #-------------
+        layout.separator()
+        box = layout.box()
+        headRow = box.row(align = True)
+        if not pps.isUseBookmark:
+            headRow.prop(pps, "isUseBookmark", text = "", icon = 'TRIA_RIGHT', emboss = False)
+            headRow.label('Bookmarks' + '-' * 50) 
+        else:
+            headRow.prop(pps, "isUseBookmark", text = "", icon = 'TRIA_DOWN', emboss = False)
+            headRow.label('Bookmarks' + '-' * 40)
+            row = headRow.row() 
+            row.enabled = len(pps.bookmarks) < 20
+            row.operator(BookmarkOp.bl_idname, text = "", icon = "ZOOMIN").type = "ADD"
+            
+            col = box.column(align = True)
+            for i in range(len(pps.bookmarks)):
+                bm = pps.bookmarks[i]
+                
+                if i % 5 == 0 and i != 0:
+                    col.separator()
+                row = col.row(align = True)
+                                
+                opProps = row.operator(BookmarkOp.bl_idname, text = "", icon = 'PANEL_CLOSE', emboss = False)
+                opProps.type = "REMOVE"
+                opProps.removeID = i
+ 
+                row.prop(bm, "bmText", text = "")
+                
+                row = row.row()
+                row.enabled = bm.bmText.strip() != ""
+                opProps = row.operator(BookmarkOp.bl_idname, text = "", icon = 'VIEWZOOM')
+                opProps.type = 'GO'
+                opProps.bmText = bm.bmText
+                
+       
 
 ####################################################################################
+# Scene item funcs, props ----
 
 def getItems_propOptions(self, context):
     return convertToItems(['HIDDEN', 'SKIP_SAVE', 'ANIMATABLE', 'LIBRARY_EDITABLE'])   
@@ -506,6 +593,9 @@ def convertToItems(itemsList):
             retVal.append((itm, itm.replace("_", " ").title().replace(" ", ""), ""))
     return retVal
 
+class BookmarkCollection(bpy.types.PropertyGroup):
+    bmText = bpy.props.StringProperty(name="Test Prop")
+    
 class AddSnippetProps(bpy.types.PropertyGroup):
     isAddRefComment = BoolProperty(name = "#Ref",       description = "Add reference line as comment", default = False)
     isAddPrefix =     BoolProperty(name = "prefix",     description="Add bpy.props at first",      default = True)
@@ -542,8 +632,11 @@ class AddSnippetProps(bpy.types.PropertyGroup):
                                  name = "Snippet Code Samples")
     panelSpaceRegion = EnumProperty(items = getSpaceRegionItems,
                                       name="Panel's SpaceRegion", 
-                                      description="Panel's bl_space_type, bl_region_type and bl_context")                                
+                                      description="Panel's bl_space_type, bl_region_type and bl_context")
+    isUseBookmark = BoolProperty()                             
+    bookmarks = CollectionProperty(type = BookmarkCollection)
 
+bpy.utils.register_class(BookmarkCollection)
 bpy.utils.register_class(AddSnippetProps)
 bpy.types.Scene.chichige_add_snippet_props = PointerProperty(type = AddSnippetProps)
 
@@ -553,11 +646,12 @@ bpy.types.Scene.chichige_add_snippet_props = PointerProperty(type = AddSnippetPr
 def menu_func(self, context):
     self.layout.operator(AddonTemplateGeneratorOp.bl_idname, icon = 'PLUGIN')
 
-# Registration---------------------------------------------
+# Registration---_------------------------------------------
 def register():
     bpy.utils.register_class(AddonTemplateGeneratorOp)
     bpy.utils.register_class(AddSnippetOp_Props)
     bpy.utils.register_class(AddSnippetOp_Samples)
+    bpy.utils.register_class(BookmarkOp)
     bpy.utils.register_class(AddSnippetPanel)
     bpy.types.TEXT_MT_templates.append(menu_func)
 
@@ -565,6 +659,7 @@ def unregister():
     bpy.utils.unregister_class(AddonTemplateGeneratorOp)
     bpy.utils.unregister_class(AddSnippetOp_Props)
     bpy.utils.unregister_class(AddSnippetOp_Samples)
+    bpy.utils.unregister_class(BookmarkOp)
     bpy.utils.unregister_class(AddSnippetPanel)
     bpy.types.TEXT_MT_templates.remove(menu_func)
     
@@ -575,6 +670,7 @@ if __name__ == "__main__":
 ####################################################################################        
 # belows are used from both TemplateGeneratorOp and CodeSamplesOp
 ####################################################################################        
+#Text blocks at last ===
 
 txt_GPL = """\
 # ##### BEGIN GPL LICENSE BLOCK #####
@@ -613,16 +709,16 @@ bl_info = {
 
 """
 txt_props = """\
-    my_bool =     BoolProperty(name="Bool Value", description="", default=False)
-    my_boolVec =  BoolVectorProperty(name="BoolVector Value", description="", default=(False, False, False))
-    my_float =    FloatProperty(name="Float Value", description="", default=0.0)
-    my_floatVec = FloatVectorProperty(name="FloatVec Value", description="", default=(0.0, 0.0, 0.0)) 
-    my_int =      IntProperty(name="Int Value", description="", default=0)  
-    my_intVec =   IntVectorProperty(name="IntVec Value", description="", default=(0, 0, 0))
+    my_bool =     BoolProperty(name="", description="", default=False)
+    my_boolVec =  BoolVectorProperty(name="", description="", default=(False, False, False))
+    my_float =    FloatProperty(name="", description="", default=0.0)
+    my_floatVec = FloatVectorProperty(name="", description="", default=(0.0, 0.0, 0.0)) 
+    my_int =      IntProperty(name="", description="", default=0)  
+    my_intVec =   IntVectorProperty(name="", description="", default=(0, 0, 0))
     my_string =   StringProperty(name="String Value", description="", default="", maxlen=0)
-    my_enum =     EnumProperty(items = [('ENUM1', 'enum1', 'enum prop 1'), 
-                                        ('ENUM2', 'enum2', 'enum prop 2')],
-                               name="Enum Value",
+    my_enum =     EnumProperty(items = [('ENUM1', 'Enum1', 'enum prop 1'), 
+                                        ('ENUM2', 'Enum2', 'enum prop 2')],
+                               name="",
                                description="",
                                default="ENUM1")
 """
@@ -672,7 +768,8 @@ def unregister():
     %s
     
 if __name__ == "__main__":
-    register()"""
+    register()
+"""
 
 txt_reg_keymap = """\
 # store keymaps here to access after registration
@@ -697,7 +794,8 @@ def unregister():
     addon_keymaps.clear()
     
 if __name__ == "__main__":
-    register()"""
+    register()
+"""
 
 
 txt_collectionProp = """\
