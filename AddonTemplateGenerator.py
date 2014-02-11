@@ -1,8 +1,7 @@
-#top
 bl_info = {
     "name": "Addon Template Generator",
     "author": "chichige-bobo",
-    "version": (0, 8, 5),
+    "version": (0, 9),
     "blender": (2, 69, 0),
     "location": "TextEditor > Templates > AddonTemplateGenerator, TextEditor > PropertiesBar > AddSnippet",
     "description": "Generate empty addon template. Add snippet of propertes and samples",
@@ -17,7 +16,7 @@ from bpy.props import *
 
 #####################################################################################
 
-def getSpaceRegionItems(self, context):
+def getMajorSpaceRegionItems(self, context):
     items = [('VIEW_3D-TOOLS',     '3DView-Tools',     'Toolbar of 3DView',       'VIEW3D', 0),
              ('VIEW_3D-TOOLPROPS', '3DView-ToolProps', 'Below Toolbar of 3DView', 'VIEW3D', 1),
              ('VIEW_3D-UI',        '3DView-UI',        'PropertyBar of 3DView',   'VIEW3D', 2),
@@ -32,8 +31,7 @@ def getSpaceRegionItems(self, context):
              ('PROPERTIES-WINDOW-material',     'Props-Window-Material',    '', 'MATERIAL', 11),
              ('PROPERTIES-WINDOW-texture',      'Props-Window-Texture',     '', 'TEXTURE', 12),
              ('PROPERTIES-WINDOW-particles',    'Props-Window-Particles',   '', 'PARTICLES', 13),
-             ('PROPERTIES-WINDOW-physics',      'Props-Window-Physics',     '', 'PHYSICS', 14),
-             ('FILE_BROWSER-CHANNELS', 'FileBrowser-Channels',     '',  'FILESEL', 15)]
+             ('PROPERTIES-WINDOW-physics',      'Props-Window-Physics',     '', 'PHYSICS', 14)]
     return items
     
 ###############################################################################################
@@ -70,7 +68,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
                                   default = set(),
                                   options = {'ENUM_FLAG'})
     
-    p_panelSpaceRegion = EnumProperty(items = getSpaceRegionItems ,
+    p_panelSpaceRegion = EnumProperty(items = getMajorSpaceRegionItems ,
                                       name="SpaceRegionType", 
                                       description="Panel's bl_space_type, bl_region_type and bl_context")                                
 
@@ -200,10 +198,12 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         col_L.alignment = 'RIGHT'
         col_L.label('UsePanel')
         col_L.label('Place')
+        col_L.label('')
         col_L.label('bl_options') 
         col_R = split.column()
         col_R.prop(self, 'isUsePanel')
         col_R.prop(self, 'p_panelSpaceRegion', text = '')
+        col_R.label('(Full list is in props panel. Replace with after completion.)')
         row = col_R.split(0.6).row().prop(self, 'p_panelOptions')
 
         layout.separator()
@@ -232,7 +232,7 @@ class AddSnippetOp_Props(bpy.types.Operator):
     bl_label = "Add Snippet Operator - Props"
     bl_options = {'INTERNAL', 'UNDO'}
     
-    type = StringProperty(name="OperatorType")
+    type = StringProperty(name="OperationType")
     
     #Added step of IntVec, unit of FloatVec                           
     refDic = {'Bool'        : "(%s, default=False, options={'ANIMATABLE'}, subtype='NONE', update=None, get=None, set=None)",
@@ -332,8 +332,32 @@ class AddSnippetOp_Samples(bpy.types.Operator):
     bl_idname = "chichige.add_snippet_operator_samples"
     bl_label = "Add Snippet Operator - Samples"
     bl_options = {'INTERNAL', 'UNDO'}
+    
+    type = StringProperty(name="OperationType")
         
     def execute(self, context):
+        pps = context.scene.chichige_add_snippet_props
+        
+        if self.type == "CodeSamples":
+            txt = self.getCodeSamples(context)
+        else:
+            txt = self.getPanelPlace(context)
+        
+        if pps.isClipboard:
+            context.window_manager.clipboard = txt
+            self.report({'INFO'}, "Sample code was copied to Clipboard.")
+        else:
+            sd = context.space_data
+            if not sd.text:
+                sd.text = bpy.data.texts.new('SnippetText')
+            sd.text.write(txt)
+            self.report({'INFO'}, "Sample code insertion was done.")
+            
+        return {'FINISHED'}
+
+              
+    #----
+    def getCodeSamples(self, context):
         pps = context.scene.chichige_add_snippet_props
         
         txt = ""
@@ -343,19 +367,17 @@ class AddSnippetOp_Samples(bpy.types.Operator):
             
         elif pps.snippetSample == "PanelClass":
             #txt_panel % (ClassName, "ToolTip", bl_idname, bl_label, SpaceRegion, bl_context, OperatorClassName)                    
-            if pps.panelSpaceRegion.startswith("PROP"):
-                temp = pps.panelSpaceRegion.split("-")[2].replace("_", "").upper()
+            if pps.panelSpace.startswith("SEPA"):
+                temp = 'VIEW3D'
+            elif pps.panelSpace == "PROPERTIES":
+                temp = pps.panelContext_properties.replace("_", "").upper()
             else:
-                temp = pps.panelSpaceRegion.split("-")[0].replace("_", "")
-            txt_blIdname_p = temp + '_PT_sample_operator'
+                temp = pps.panelSpace.replace("_", "")
+            txt_blIdname_p = temp + '_PT_sample_panel'
             txt_blOptions_p = "#bl_options =  {'DEFAULT_CLOSED'}\n"
             
-            temp = pps.panelSpaceRegion.split("-")
-            txt_space_p = "bl_space_type = '%s'\n" % temp[0]
-            txt_region_p = "    bl_region_type = '%s'" % temp[1]
-            txt_context_p = "" if len(temp) < 3 else "\n    bl_context = '%s'" % temp[2]
-            txt = txt_panel % ("SamplePanel", '"ToolTip"', txt_blIdname_p, "Sample Panel", txt_blOptions_p, 
-                                                                txt_space_p + txt_region_p + txt_context_p, "SampleOperator")
+            txt_panelPlace = self.getPanelPlace(context)
+            txt = txt_panel % ("SamplePanel", '"ToolTip"', txt_blIdname_p, "Sample Panel", txt_blOptions_p, txt_panelPlace, "SampleOperator")
         elif pps.snippetSample == "Props(Operator)":
             txt = txt_props
         
@@ -392,19 +414,62 @@ class AddSnippetOp_Samples(bpy.types.Operator):
         elif pps.snippetSample == "GPL":
             txt = txt_GPL
         
-        if pps.isClipboard:
-            context.window_manager.clipboard = txt
-            self.report({'INFO'}, "Sample code was copied to Clipboard.")
+        return txt
+
+    #---- #CURRENT
+    def getPanelPlace(self, context):
+        pps = context.scene.chichige_add_snippet_props
+                
+        # below is True only when called when "CodeSamples > PanelClass"
+        # because 'SEPARATOR' is blocked in PanelPlace section by ".enabled = False".
+        if pps.panelSpace.startswith('SEPA'):
+            return "bl_space_type = 'VIEW_3D'\n    bl_region_type = 'TOOLS'\n"
+        
+        txt = ""
+        txt_space = "bl_space_type = '%s'" % pps.panelSpace
+        if pps.panelSpace == 'VIEW_3D' or pps.panelSpace == 'CLIP_EDITOR':
+            txt_region = pps.panelRegion_view3d_clip
+        elif pps.panelSpace == 'PROPERTIES' or pps.panelSpace == 'USER_PREFERENCES':
+            txt_region = 'WINDOW'
+        elif pps.panelSpace == 'FILE_BROWSER':
+            txt_region = 'CHANNELS'
+        elif pps.panelSpace == 'IMAGE_EDITOR':
+            txt_region = pps.panelRegion_image
+        elif pps.panelSpace == 'NODE_EDITOR':
+            txt_region = pps.panelRegion_node
         else:
-            sd = context.space_data
-            if not sd.text:
-                sd.text = bpy.data.texts.new('SnippetText')
-            sd.text.write(txt)
-            self.report({'INFO'}, "Sample code insertion was done.")
+            txt_region = 'UI'
+        txt_region = "bl_region_type = '%s'" % txt_region
+        
+        txt_context = ""
+        txt_category = ""
+        if pps.panelSpace == 'VIEW_3D':
+            if pps.panelContext_view3d != 'NO':
+                txt_context = "bl_context = '%s'" % pps.panelContext_view3d
             
-        return {'FINISHED'}
-
-
+            if pps.panelRegion_view3d_clip == 'TOOLS':
+                if pps.panelContext_view3d == 'objectmode':
+                    txt_category = pps.panelCategory_objectmode
+                elif pps.panelContext_view3d == 'mesh_edit':
+                    txt_category = pps.panelCategory_editmode
+                else:
+                    txt_category = pps.panelCategory_others
+                
+                if txt_category == 'NO':
+                    txt_category = "" 
+                else:
+                    txt_category = "bl_category = '%s'" % txt_category                  
+        
+        elif pps.panelSpace == 'PROPERTIES':
+            txt_context = "bl_context = '%s'" % pps.panelContext_properties
+        
+        txt += "    %s\n    %s\n    " % (txt_space, txt_region)
+        txt += "" if not txt_context else ("%s\n    " % txt_context)
+        txt += "" if not txt_category else ("%s\n    " % txt_category)
+         
+        return txt
+    
+    
 ####################################################################################        
 #TODO: UILayout method sample
 #TODO : Clear all, def, full Button
@@ -518,19 +583,75 @@ class AddSnippetPanel(bpy.types.Panel):
         split.operator(AddSnippetOp_Props.bl_idname, text = "Collection").type = 'Collection'
         split.operator(AddSnippetOp_Props.bl_idname, text = "Pointer").type = 'Pointer'
         
-        #-----------
-        layout.label('CodeSamples' + '-' * 80)
-        split = layout.split(0.85)
-        split.prop(pps, 'snippetSample', text="")
-        row = split.row()
+        # CodeSamples-----------
+        layout.separator()
+        layout.label('Code Samples' + '-' * 80)
+        row = layout.row(align = True)
+        row.prop(pps, 'snippetSample', text="")
         row.enabled = pps.snippetSample != 'SEPARATOR'
-        row.operator(AddSnippetOp_Samples.bl_idname, text = ">>")
-        split = layout.split(0.8)
-        row = split.row()
-        row.enabled = pps.snippetSample == 'PanelClass'
-        row.prop(pps, "panelSpaceRegion", text = "PanelSpace")
- 
-        #-------------
+        row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "CodeSamples"
+
+        # Panel Place ------
+        layout.separator()
+        layout.label('Panel Place' + '-' * 80)
+
+        split = layout.split(0.25)
+        colLabel = split.column()
+        subSplit = split.split(0.85)
+        colCombo = subSplit.column()
+        colButton = subSplit.column()
+
+        colLabel.label('Space:')
+        colCombo.prop(pps, "panelSpace", text = '')
+        colButton.label('')
+        
+        colLabel.label('Region:')
+        if pps.panelSpace.startswith('SEPA'):
+            colCombo.label('')
+        else:
+            if pps.panelSpace == 'VIEW_3D' or pps.panelSpace == 'CLIP_EDITOR':
+                colCombo.prop(pps, "panelRegion_view3d_clip", text = "")
+            elif pps.panelSpace == 'PROPERTIES' or pps.panelSpace == 'USER_PREFERENCES':
+                colCombo.label("WINDOW")
+            elif pps.panelSpace == 'FILE_BROWSER':
+                colCombo.label("CHANNELS")
+            elif pps.panelSpace == 'IMAGE_EDITOR':
+                colCombo.prop(pps, "panelRegion_image", text = "")
+            elif pps.panelSpace == 'NODE_EDITOR':
+                colCombo.prop(pps, "panelRegion_node", text = "")
+            else:
+                colCombo.label("UI")
+            
+            #JUMP
+            if pps.panelSpace == 'VIEW_3D':
+                colLabel.label("Context:")
+                colCombo.prop(pps, "panelContext_view3d", text = "")
+                if pps.panelRegion_view3d_clip == 'TOOLS': # and pps.panelContext_view3d != 'NO': 
+                    colLabel.label("Tab:")
+                    if pps.panelContext_view3d == 'objectmode':
+                        colCombo.prop(pps, "panelCategory_objectmode", text = "")
+                    elif pps.panelContext_view3d == 'mesh_edit':
+                        colCombo.prop(pps, "panelCategory_editmode", text = "")
+                    else:
+                        colCombo.prop(pps, "panelCategory_others", text = "")                        
+            
+            elif pps.panelSpace == 'PROPERTIES':
+                colLabel.label("Context:")
+                colCombo.prop(pps, "panelContext_properties", text = "")
+        
+        # determine button position
+        if pps.panelSpace == 'VIEW_3D':
+            colButton.label('') #region row
+            if pps.panelRegion_view3d_clip == 'TOOLS':
+                colButton.label('')
+        elif pps.panelSpace == 'PROPERTIES':
+            colButton.label('') #region row
+
+        row = colButton.row() 
+        row.enabled = not pps.panelSpace.startswith('SEPA')
+        row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "PanelPlace"
+        
+        # Bookmarks ------------
         layout.separator()
         box = layout.box()
         headRow = box.row(align = True)
@@ -570,32 +691,70 @@ class AddSnippetPanel(bpy.types.Panel):
 # Scene item funcs, props ----
 
 def getItems_propOptions(self, context):
-    return convertToItems(['HIDDEN', 'SKIP_SAVE', 'ANIMATABLE', 'LIBRARY_EDITABLE'])   
+    return convertToItems_prop(['HIDDEN', 'SKIP_SAVE', 'ANIMATABLE', 'LIBRARY_EDITABLE'])   
 
 def getItems_propSubtype(self, context):
-    return convertToItems(['-- Subtype --', 'UNSIGNED', 'PERCENTAGE', 'FACTOR', 'ANGLE', 'TIME', 'DISTANCE', 'NONE'])   
+    return convertToItems_prop(['-- Subtype --', 'UNSIGNED', 'PERCENTAGE', 'FACTOR', 'ANGLE', 'TIME', 'DISTANCE', 'NONE'])   
 
 def getItems_propVecSubtype(self, context):
-    return convertToItems(['-- VecSub --', 'COLOR', 'TRANSLATION', 'DIRECTION', 'VELOCITY', 'ACCELERATION', 'MATRIX', 'EULER', 'QUATERNION', 'AXISANGLE', 'XYZ', 'COLOR_GAMMA', 'LAYER', 'NONE'])
+    return convertToItems_prop(['-- VecSub --', 'COLOR', 'TRANSLATION', 'DIRECTION', 'VELOCITY', 'ACCELERATION', 'MATRIX', 'EULER', 'QUATERNION', 'AXISANGLE', 'XYZ', 'COLOR_GAMMA', 'LAYER', 'NONE'])
 
 def getItems_floatUnit(self, context):
-    return convertToItems(['-- Unit --', 'NONE', 'LENGTH', 'AREA', 'VOLUME', 'ROTATION', 'TIME', 'VELOCITY', 'ACCELERATION'])
+    return convertToItems_prop(['-- Unit --', 'NONE', 'LENGTH', 'AREA', 'VOLUME', 'ROTATION', 'TIME', 'VELOCITY', 'ACCELERATION'])
  
 def getItems_stringSubtype(self, context):
-    return convertToItems(['-- Subtype --', 'FILE_PATH', 'DIR_PATH', 'FILENAME', 'NONE'])
+    return convertToItems_prop(['-- Subtype --', 'FILE_PATH', 'DIR_PATH', 'FILENAME', 'NONE'])
 
-def convertToItems(itemsList):
+def convertToItems_prop(itemsList):
     retVal = []
-    for itm in itemsList:
-        if itm.startswith("-"):
-            retVal.append(('NO', itm, ""))
+    for item in itemsList:
+        if item.startswith("-"):
+            retVal.append(('NO', item, ""))
         else: 
-            retVal.append((itm, itm.replace("_", " ").title().replace(" ", ""), ""))
+            retVal.append((item, item.replace("_", " ").title().replace(" ", ""), ""))
     return retVal
 
+#-----
 class BookmarkCollection(bpy.types.PropertyGroup):
     bmText = bpy.props.StringProperty(name="Test Prop")
     
+#-----
+def getPanelRegionItems_view3d_clip(self, context):
+    return convertToItems_panelRegion(['TOOLS', 'TOOL_PROPS', 'UI'])
+
+def getPanelRegionItems_image(self, context):
+    return convertToItems_panelRegion(['UI', 'PREVIEW'])
+
+def getPanelRegionItems_node(self, context):
+    return convertToItems_panelRegion(['UI', 'TOOLS'])
+
+def convertToItems_panelRegion(itemsList = None):
+    retVal = []
+    for item in itemsList:
+        retVal.append((item, item, ""))
+    return retVal
+
+#----------
+def getPanelCategoryItems_objectmode(self, context):
+    return convertToItems_panelCategory(['Create', 'Basic', 'Animation', 'Physics', 'History'])
+
+def getPanelCategoryItems_editmode(self, context):
+    return convertToItems_panelCategory(['Create', 'Basic'])
+
+def getPanelCategoryItems_others(self, context):#header only
+    return convertToItems_panelCategory()
+
+def convertToItems_panelCategory(itemsList = None):
+    if not itemsList:
+        itemsList = []
+    itemsList.append('Grease Pencil')
+    itemsList.append('Relations')
+    retVal = [('NO', '-- none --', '')]
+    for item in itemsList:
+        retVal.append((item, item, ""))
+    return retVal
+
+#-----
 class AddSnippetProps(bpy.types.PropertyGroup):
     isAddRefComment = BoolProperty(name = "#Ref",       description = "Add reference line as comment", default = False)
     isAddPrefix =     BoolProperty(name = "prefix",     description="Add bpy.props at first",      default = True)
@@ -630,15 +789,67 @@ class AddSnippetProps(bpy.types.PropertyGroup):
                                           ('RegKeymap',       'Reg with Keymap', ''),
                                           ('GPL',             'GPL Block', '')],
                                  name = "Snippet Code Samples")
-    panelSpaceRegion = EnumProperty(items = getSpaceRegionItems,
-                                      name="Panel's SpaceRegion", 
-                                      description="Panel's bl_space_type, bl_region_type and bl_context")
+
+    #-----
+    panelSpace = EnumProperty(items = [('VIEW_3D',          '3D View',               '', 'VIEW3D',      0),
+                                       ('GRAPH_EDITOR',     'Graph Editor',          '', 'IPO',         1), 
+                                       ('NLA_EDITOR',       'NLA Editor',            '', 'NLA',         2), 
+                                       ('SEPARATOR1',       '-' * 40,                '', '',            3), 
+                                       ('IMAGE_EDITOR',     'UV/Image Editor',       '', 'IMAGE_COL',   4), 
+                                       ('SEQUENCE_EDITOR',  'Video Sequence Editor', '', 'SEQUENCE',    5), 
+                                       ('CLIP_EDITOR',      'Movie Clip Editor',     '', 'CLIP',        6), 
+                                       ('TEXT_EDITOR',      'Text Editor',           '', 'TEXT',        7), 
+                                       ('NODE_EDITOR',      'Node Editor',           '', 'NODETREE',    8), 
+                                       ('LOGIC_EDITOR',     'Logic Editor',          '', 'LOGIC',       9), 
+                                       ('SEPARATOR2',       '-' * 40,                '', '',            10), 
+                                       ('PROPERTIES',       'Properties',            '', 'BUTS',        11), 
+                                       ('USER_PREFERENCES', 'User Preferences',      '', 'PREFERENCES', 12), 
+                                       ('FILE_BROWSER',     'File Browser',          '', 'FILESEL',     13)],
+                              name = "Space",
+                              description = "bl_space_type of Panel class")
+
+    panelRegion_view3d_clip = EnumProperty(items = getPanelRegionItems_view3d_clip, name = "Region", description = "bl_region_type of Panel class")
+    panelRegion_image =       EnumProperty(items = getPanelRegionItems_image,       name = "Region", description = "bl_region_type of Panel class")
+    panelRegion_node =        EnumProperty(items = getPanelRegionItems_node,        name = "Region", description = "bl_region_type of Panel class")
+
+    panelContext_view3d = EnumProperty(items = [('NO',             '-- none --',   '', '', 0),
+                                                ('objectmode',     'Object Mode',  '', 'OBJECT_DATA', 1),
+                                                ('posemode',       'Pose Mode',    '', 'POSE_HLT', 2),
+                                                ('SEPARATOR',      '-' * 20,       '', '', 3),
+                                                ('mesh_edit',     'Edit Mesh',     '', 'OUTLINER_OB_MESH', 4),
+                                                ('armature_edit', 'Edit Armature', '', 'OUTLINER_OB_ARMATURE', 5),
+                                                ('curve_edit',    'Edit Curve',    '', 'OUTLINER_OB_CURVE', 6),
+                                                ('text_edit',     'Edit Text',     '', 'OUTLINER_OB_FONT', 7),
+                                                ('SEPARATOR',     '-' * 20,        '', '', 8),
+                                                ('lattice_edit',  'Edit Lattice',  '', 'OUTLINER_OB_LATTICE', 9),
+                                                ('surface_edit',  'Edit Surface',  '', 'OUTLINER_OB_SURFACE', 10),
+                                                ('mball_edit',    'Edit MBall',    '', 'OUTLINER_OB_META', 11),
+                                                ('SEPARATOR',     '-' * 20,        '', '', 12),
+                                                ('imagepaint',    'Image Paint',   '', 'TPAINT_HLT', 13),
+                                                ('weightpaint',   'Weight Paint',  '', 'WPAINT_HLT', 14),
+                                                ('vertexpaint',   'Vertex Paint',  '', 'VPAINT_HLT', 15),
+                                                ('particlemode',  'Particle Mode', '', 'PARTICLEMODE', 16)],
+                                        name = "Context", description = "bl_context of Panel class")
+    panelContext_properties = EnumProperty(items = [('render',       'Render',      '', 'SCENE', 3),
+                                                   ('render_layer', 'RenderLayer', '', 'RENDERLAYERS', 4),
+                                                   ('scene',        'Scene',       '', 'SCENE_DATA', 5),
+                                                   ('world',        'World',       '', 'WORLD_DATA', 6),
+                                                   ('object',       'Object',      '', 'OBJECT_DATA', 7),
+                                                   ('constraint',   'Constraint',  '', 'CONSTRAINT', 8),
+                                                   ('modifier',     'Modifier',    '', 'MODIFIER', 9),
+                                                   ('data',         'Data',        '', 'MESH_DATA', 10),
+                                                   ('material',     'Material',    '', 'MATERIAL', 11),
+                                                   ('texture',      'Texture',     '', 'TEXTURE', 12),
+                                                   ('particles',    'Particles',   '', 'PARTICLES', 13),
+                                                   ('physics',      'Physics',     '', 'PHYSICS', 14)],
+                                        name = "Context", description = "bl_context of Panel class")
+
+    panelCategory_objectmode = EnumProperty(items = getPanelCategoryItems_objectmode, name = "Tab", description = "bl_category of Panel class")
+    panelCategory_editmode =   EnumProperty(items = getPanelCategoryItems_editmode,   name = "Tab", description = "bl_category of Panel class")
+    panelCategory_others =     EnumProperty(items = getPanelCategoryItems_others,     name = "Tab", description = "bl_category of Panel class")
+                                 
     isUseBookmark = BoolProperty()                             
     bookmarks = CollectionProperty(type = BookmarkCollection)
-
-bpy.utils.register_class(BookmarkCollection)
-bpy.utils.register_class(AddSnippetProps)
-bpy.types.Scene.chichige_add_snippet_props = PointerProperty(type = AddSnippetProps)
 
 
 ####################################################################################        
@@ -648,6 +859,10 @@ def menu_func(self, context):
 
 # Registration---_------------------------------------------
 def register():
+    bpy.utils.register_class(BookmarkCollection)
+    bpy.utils.register_class(AddSnippetProps)
+    bpy.types.Scene.chichige_add_snippet_props = PointerProperty(type = AddSnippetProps)
+
     bpy.utils.register_class(AddonTemplateGeneratorOp)
     bpy.utils.register_class(AddSnippetOp_Props)
     bpy.utils.register_class(AddSnippetOp_Samples)
@@ -662,6 +877,10 @@ def unregister():
     bpy.utils.unregister_class(BookmarkOp)
     bpy.utils.unregister_class(AddSnippetPanel)
     bpy.types.TEXT_MT_templates.remove(menu_func)
+
+    bpy.utils.unregister_class(BookmarkCollection)
+    bpy.utils.unregister_class(AddSnippetProps)
+    del bpy.types.Scene.chichige_add_snippet_props
     
 if __name__ == "__main__":
     register()
