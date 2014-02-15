@@ -10,6 +10,9 @@ bl_info = {
     "tracker_url": "",
     "category": "Development"}
 
+#TODO : Listup used keymapping
+#TODO : Enum of keymap combination
+
 # LET USERS TO MANIPULATE AFTER GENERATED, NOT COMPLETE AT DIALOG
 import bpy
 from bpy.props import *
@@ -29,14 +32,12 @@ def getMajorSpaceRegionItems(self, context):
              ('PROPERTIES-WINDOW-modifier',     'Props-Window-Modifier',    '', 'MODIFIER', 9),
              ('PROPERTIES-WINDOW-data',         'Props-Window-Data',        '', 'MESH_DATA', 10),
              ('PROPERTIES-WINDOW-material',     'Props-Window-Material',    '', 'MATERIAL', 11),
-             ('PROPERTIES-WINDOW-texture',      'Props-Window-Texture',     '', 'TEXTURE', 12),
-             ('PROPERTIES-WINDOW-particles',    'Props-Window-Particles',   '', 'PARTICLES', 13),
-             ('PROPERTIES-WINDOW-physics',      'Props-Window-Physics',     '', 'PHYSICS', 14)]
+             ('PROPERTIES-WINDOW-texture',      'Props-Window-Texture',     '', 'TEXTURE', 12)]
     return items
     
 ###############################################################################################
 class AddonTemplateGeneratorOp(bpy.types.Operator):
-    """ToolTip"""
+    """Create empty addon template at once"""
     bl_idname = "chichige.addon_template_generator_operator"
     bl_label = "Addon Template Generator"
     bl_options = {'PRESET', 'INTERNAL'}
@@ -44,27 +45,26 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
     # name for label, desc for tooltip in Operator Panel
     # options = Enumerator in ['HIDDEN', 'SKIP_SAVE', 'ANIMATABLE', 'LIBRARY_EDITABLE'] (and 'ENUM_FLAG' for EnumProp)
     
-    p_name = StringProperty(name = "Overall Name", description="Used for various places", default="Addon Template")
+    p_name = StringProperty(name = "Overall Name", description="Used for various places", default="Hello World")
     p_opOptions = EnumProperty(items = [('REGISTER', 'Register', 'Display in the info window and support the redo toolbar panel.'), 
-                                      ('UNDO',     'Undo', 'Push an undo event (needed for operator redo)'),
-                                      ('BLOCKING', 'Blocking', 'Block anything else from using the cursor'),
-                                      ('MACRO',    'Macro', 'Use to check if an operator is a macro'),
-                                      ('GRAB_POINTER', 'GrabPointer', 'Use so the operator grabs the mouse focus, enables wrapping when continuous grab is enabled'),
-                                      ('PRESET', 'Preset', 'Display a preset button with the operators settings'),
-                                      ('INTERNAL', 'Internal', 'Removes the operator from search results')],
+                                        ('UNDO',     'Undo', 'Push an undo event (needed for operator redo)'),
+                                        ('BLOCKING', 'Blocking', 'Block anything else from using the cursor'),
+                                        ('MACRO',    'Macro', 'Use to check if an operator is a macro'),
+                                        ('GRAB_POINTER', 'GrabPointer', 'Use so the operator grabs the mouse focus, enables wrapping when continuous grab is enabled'),
+                                        ('PRESET', 'Preset', 'Display a preset button with the operators settings'),
+                                        ('INTERNAL', 'Internal', 'Removes the operator from search results')],
                               name="bl_options", 
-                              description="Options for this operator type", 
+                              description="bl_options for this operator", 
                               default={'REGISTER'}, 
                               options = {'ENUM_FLAG'})
     
-    isUseOpProps = BoolProperty(name='Add Operator Properties', default = False )
-    # put all method. it's not so bothering to delete unwanted methods.
-    
-    isUsePanel = BoolProperty(name='Add Panel Class', default = True )
+    isUseOpProps = BoolProperty(name='Add Operator Properties', description = "Add a set of properties for this operator", default = False )
+
+    isUsePanel = BoolProperty(name='Add Panel Class', description = "Whether use Panel class or not.", default = True )
     p_panelOptions = EnumProperty(items = [('DEFAULT_CLOSED', 'DefaultClosed', 'Defines if the panel has to be open or collapsed at the time of its creation'), 
                                            ('HIDE_HEADER', 'HideHeader', 'If set to False, the panel shows a header, which contains a clickable arrow to collapse the panel and the label')],
                                   name="PanelOptions",
-                                  description="Options for Panel",
+                                  description="bl_options for this Panel",
                                   default = set(),
                                   options = {'ENUM_FLAG'})
     
@@ -72,10 +72,10 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
                                       name="SpaceRegionType", 
                                       description="Panel's bl_space_type, bl_region_type and bl_context")                                
 
-    isUseGPLNotice = BoolProperty(name='Add GPL Notification', default = False)
-    isUseSceneProps = BoolProperty(name='Add Scene Properties', default = False )
-    isUseMenuFunc = BoolProperty(name = 'Add Menu Function', default = False)
-    isUseKeymap = BoolProperty(name='Add Keymapping', default = False )
+    isUseGPLNotice =  BoolProperty(name ='Add GPL Notification', default = False)
+    isUseSceneProps = BoolProperty(name ='Add Scene Properties', default = False )
+    isUseMenuFunc =   BoolProperty(name = 'Add Menu Function', default = False)
+    isUseKeymap =     BoolProperty(name ='Add Keymapping', default = False )
     
     #=AddonTempGen execute=======================================
     def execute(self, context):
@@ -91,14 +91,14 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         
         #-----operator               
         txt_name = self.p_name.strip()#re.sub('[\W]', '_', txt_name)
-        txt_name = txt_name if txt_name != '' else 'Addon Template'
+        txt_name = txt_name if txt_name != '' else 'Hello World'
         txt_className = txt_name.replace(" ", "") + "Operator" 
         txt_blIdname = 'addongen.' + txt_name.replace(" ", "_").lower() + '_operator'
         txt_blLabel = txt_name + " Operator"
         
         txt_blOptions = ""
         if len(self.p_opOptions) > 0:
-            temp = list(self.p_opOptions)[::-1]
+            temp = list(self.p_opOptions)[::-1] #I want 'REGISTER' to be first.
             for t in temp:
                 txt_blOptions += "," if txt_blOptions != "" else ""
                 txt_blOptions += "'%s'" % t
@@ -135,8 +135,6 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         #-----
         if self.isUseSceneProps:
             txt += "class MySceneProps(bpy.types.PropertyGroup):\n" + txt_props
-            txt += "bpy.utils.register_class(MySceneProps)\n"
-            txt += "bpy.types.Scene.%s_props = PointerProperty(type = MySceneProps)\n\n" % txt_blIdname.replace(".", "_")
            
         #-----
         if self.isUseMenuFunc:
@@ -144,10 +142,20 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
             txt += "    self.layout.operator(%s.bl_idname, icon = 'PLUGIN')\n\n" % txt_className
         
         #-----
-        temp1 = "bpy.utils.register_class(%s)" % txt_className
+        temp1 = ""
+        temp2 = ""
+        if self.isUseSceneProps:
+            temp1 += "bpy.utils.register_class(MySceneProps)\n"
+            temp1 += "    bpy.types.Scene.%s_props = PointerProperty(type = MySceneProps)\n\n" % txt_blIdname.replace(".", "_")
+            temp1 += "    "
+            temp2 += "bpy.utils.unregister_class(MySceneProps)\n"
+            temp2 += "    #del bpy.types.Scene.%s_props\n\n" % txt_blIdname.replace(".", "_")
+            temp2 += "    "
+            
+        temp1 += "bpy.utils.register_class(%s)" % txt_className
         temp1 += "" if not self.isUsePanel else "\n    bpy.utils.register_class(%s)" % txt_className_p
         temp1 += "" if not self.isUseMenuFunc else "\n    bpy.types.VIEW3D_MT_object.append(menu_func)"
-        temp2 = "bpy.utils.unregister_class(%s)" % txt_className
+        temp2 += "bpy.utils.unregister_class(%s)" % txt_className
         temp2 += "" if not self.isUsePanel else "\n    bpy.utils.unregister_class(%s)" % txt_className_p
         temp2 += "" if not self.isUseMenuFunc else "\n    bpy.types.VIEW3D_MT_object.remove(menu_func)"
         if not self.isUseKeymap:
@@ -156,7 +164,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
             txt += txt_reg_keymap % (temp1, txt_className, temp2)
         
         #-----
-        textObj = bpy.data.texts.new('z_AddonTemplate')
+        textObj = bpy.data.texts.new('z_Hello_World')
         textObj.write(txt)
         context.space_data.text = textObj
         self.report({'INFO'}, "'%s' was created." % textObj.name)
@@ -177,9 +185,9 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         row = layout.row(align = True)
         #row.alignment = 'CENTER'
         col = row.column(align = True)
-        col.label("            When above name is 'Addon Template'...")
-        col.label("                ClassName = 'AddonTemplateOperator'")
-        col.label("                bl_idname = 'addongen.addon_template_operator'")
+        col.label("            When above name is 'Hello World'...")
+        col.label("                ClassName = 'HellowWorldOperator'")
+        col.label("                bl_idname = 'addongen.hello_world_operator'")
         
         layout.label('Operator ' + ('-' * 300))
         split = layout.split(0.2)
@@ -227,7 +235,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         
 ####################################################################################
 class AddSnippetOp_Props(bpy.types.Operator):
-    """Add property line to current cursor"""
+    """Add a property to current cursor position"""
     bl_idname = "chichige.add_snippet_operator_props"
     bl_label = "Add Snippet Operator - Props"
     bl_options = {'INTERNAL', 'UNDO'}
@@ -250,6 +258,10 @@ class AddSnippetOp_Props(bpy.types.Operator):
     def execute(self, context):
         pps = context.scene.chichige_add_snippet_props
         
+        if self.type.startswith("CHECK"):
+            self.changeCheckState(context)
+            return {'FINISHED'}
+                   
         txt = ""
         refNameDesc = 'name="", description=""'
         if pps.isAddRefComment:
@@ -270,8 +282,8 @@ class AddSnippetOp_Props(bpy.types.Operator):
         elif self.type == 'Collection' or self.type == 'Pointer':
             subText = "type = ClassName"
         
-        subText += "" if not pps.isAddName    else (", " if subText else "") + 'name = ""'
-        subText += "" if not pps.isAddDesc    else (", " if subText else "") + 'description = ""'
+        subText += "" if not pps.isAddName else (", " if subText else "") + 'name = ""'
+        subText += "" if not pps.isAddDesc else (", " if subText else "") + 'description = ""'
     
         if self.type != 'Collection' and self.type != 'Pointer':
             subText += "" if not pps.isAddDefault else (", " if subText else "") + 'default = ' + self.defaultDic[self.type]
@@ -325,23 +337,106 @@ class AddSnippetOp_Props(bpy.types.Operator):
             self.report({'INFO'}, "Property insertion was done.")
 
         return {'FINISHED'}
+    
+    #CURRENT
+    def changeCheckState(self, context):
+        pps = context.scene.chichige_add_snippet_props
+        if self.type == "CHECK_CLEAR":
+            pps.isAddRefComment = pps.isAddPrefix = pps.isAddName = pps.isAddDesc = pps.isAddDefault = False
+            pps.isAddMinMax = pps.isAddSoftMinMax =  pps.isAddStep = pps.isAddSize = pps.isAddUpdate = False
+            pps.propOptions = set()# I don't know if this is correct way
+            pps.propSubtype =  pps.propVecSubtype = pps.floatUnit = pps.stringSubtype =  'NO'
+            pps.isAddFloatPrec = pps.isAddEnumFlag =  False
+        
+        elif self.type == "CHECK_DEFAULT":
+            pps.isAddPrefix = pps.isAddName = pps.isAddDesc = pps.isAddDefault = pps.isAddMinMax = True
+            pps.isAddRefComment = pps.isAddSoftMinMax =  pps.isAddStep = pps.isAddSize = pps.isAddUpdate = False
+            pps.propOptions = set()
+            pps.propSubtype =  pps.propVecSubtype = pps.floatUnit = pps.stringSubtype =  'NO'
+            pps.isAddFloatPrec = pps.isAddEnumFlag =  False
 
+        elif self.type == "CHECK_ALL":
+            pps.isAddRefComment = pps.isAddPrefix = pps.isAddName = pps.isAddDesc = pps.isAddDefault = True
+            pps.isAddMinMax = pps.isAddSoftMinMax =  pps.isAddStep = pps.isAddSize = pps.isAddUpdate = True
+            pps.propOptions = {'ANIMATABLE'}
+            pps.propSubtype =  pps.propVecSubtype = pps.floatUnit = pps.stringSubtype =  'NONE'
+            pps.isAddFloatPrec = pps.isAddEnumFlag =  True
+        
+    def changeCheckState2(self, context):
+        pps = context.scene.chichige_add_snippet_props
+        if self.type == "CHECK_CLEAR":
+            pps.isAddRefComment = False
+            pps.isAddPrefix = False
+            pps.isAddName = False
+            pps.isAddDesc = False
+            pps.isAddDefault = False
+            pps.isAddMinMax = False
+            pps.isAddSoftMinMax = False
+            pps.isAddStep = False
+            pps.isAddSize = False
+            pps.isAddUpdate = False
+            
+            pps.propOptions = None
+            pps.propSubtype = '-- Subtype --'
+            pps.propVecSubtype = '-- VecSub --'
+        
+            pps.isAddFloatPrec = False
+            pps.floatUnit = '-- Unit --'
+            pps.stringSubtype =  '-- Subtype --'
+            pps.isAddEnumFlag =  False
+        elif self.type == "CHECK_DEFAULT":
+            pass
+        elif self.type == "CHECK_ALL":
+            pass
+
+        
 ####################################################################################        
 class AddSnippetOp_Samples(bpy.types.Operator):
-    """Add sample code to current cursor"""
+    """Add sample code to current cursor position"""
     bl_idname = "chichige.add_snippet_operator_samples"
     bl_label = "Add Snippet Operator - Samples"
     bl_options = {'INTERNAL', 'UNDO'}
     
-    type = StringProperty(name="OperationType")
-        
+    type = EnumProperty(items = [('CodeSamples', 'CodeSamples', 'Insert/Copy selected sample'), 
+                                 ('PanelPlace', 'PanelPlace', 'Insert/Copy selected place'),
+                                 ('UILayoutMembers', 'UILayoutMembers', 'Insert/Copy selected member'),
+                                 ('INEFFECTIVE', 'INEFFECTIVE', 'Separator selected. Do nothing.')])
+    
+    uiLayoutParamDic = {'active':               'active = False', 
+                        'alert' :               'alert = False',
+                        'alignment':            "alignment = 'EXPAND' #enum in ['EXPAND', 'LEFT', 'CENTER', 'RIGHT']",
+                        'enabled':              'enabled = False',
+                        'operator_context':     "operator_context = 'INVOKE_DEFAULT' #enum in ['INVOKE_DEFAULT', 'INVOKE_REGION_WIN', 'INVOKE_REGION_CHANNELS', 'INVOKE_REGION_PREVIEW', 'INVOKE_AREA', 'INVOKE_SCREEN', 'EXEC_DEFAULT', 'EXEC_REGION_WIN', 'EXEC_REGION_CHANNELS', 'EXEC_REGION_PREVIEW', 'EXEC_AREA', 'EXEC_SCREEN']",
+                        'scale_x':              'scale_x = 0.0', 
+                        'scale_y':              'scale_y = 0.0',
+                        'row()':                'row(align = False)', 
+                        'column()':             'column(align = False)', 
+                        'column_flow()':        'column_flow(columns = 0, align = False)',
+                        'box()':                'box()', 
+                        'split()':              'split(percentage = 0.0, align = False)', 
+                        'prop()':               'prop(data, property, text = "", text_ctxt = "", translate = True, icon = %s, expand = False, slider = False, toggle = False, icon_only = False, event = False, full_event = False, emboss = True, index = -1)' % "'NONE'",
+                        'props_enum()':         'props_enum(data, property)',
+                        'prop_menu_enum()':     'prop_menu_enum(data, property, text = "", text_ctxt = "", translate = True, icon = %s)' % "'NONE'", 
+                        'prop_enum()':          'prop_enum(data, property, value, text = "", text_ctxt = "", translate = True, icon = %s)' % "'NONE'", 
+                        'prop_search()':        'prop_search(data, property, search_data, search_property, text = "", text_ctxt = "", translate = True, icon = %s)' % "'NONE'", 
+                        'operator()':           'operator(operator, text = "", text_ctxt = "", translate = True, icon = %s, emboss = True)' % "'NONE'", 
+                        'operator_enum()':      'operator_enum(operator, property)', 
+                        'operator_menu_enum()': 'operator_menu_enum(operator, property, text = "", text_ctxt = "", translate = True, icon = %s)' % "'NONE'", 
+                        'label()':              'label(text="", text_ctxt="", translate=True, icon=%s, icon_value=0)' % "'NONE'", 
+                        'menu()':               'menu(menu, text = "", text_ctxt = "", translate = True, icon = %s)' % "'NONE'", 
+                        'separator()':          'separator()'}
+            
     def execute(self, context):
         pps = context.scene.chichige_add_snippet_props
         
-        if self.type == "CodeSamples":
+        if self.type == 'CodeSamples':
             txt = self.getCodeSamples(context)
-        else:
+        elif self.type == 'PanelPlace':
             txt = self.getPanelPlace(context)
+        elif self.type == 'UILayoutMembers':
+            txt = self.getUILayoutMembers(context)
+        elif self.type == 'INEFFECTIVE':
+            return {'CANCELLED'}
         
         if pps.isClipboard:
             context.window_manager.clipboard = txt
@@ -354,16 +449,14 @@ class AddSnippetOp_Samples(bpy.types.Operator):
             self.report({'INFO'}, "Sample code insertion was done.")
             
         return {'FINISHED'}
-
-              
-    #----
+      
     def getCodeSamples(self, context):
         pps = context.scene.chichige_add_snippet_props
         
         txt = ""
         if pps.snippetSample == "OperatorClass":
             #txt_operator % (className, "ToolTip", bl_idname, bl_label, \t(bl_options)\n\n, (props)) 
-            txt = txt_operator % ("SampleOperator", '"ToolTip"', "addongen.sample_operator", "Sample Operator", "    bl_options = {'REGISTER'}\n\n", "")
+            txt = txt_operator % ("HelloWorldOperator", '"ToolTip of HelloWorldOperator"', "addongen.hello_world_operator", "Hello World Operator", "    bl_options = {'REGISTER'}\n\n", "")
             
         elif pps.snippetSample == "PanelClass":
             #txt_panel % (ClassName, "ToolTip", bl_idname, bl_label, SpaceRegion, bl_context, OperatorClassName)                    
@@ -373,50 +466,51 @@ class AddSnippetOp_Samples(bpy.types.Operator):
                 temp = pps.panelContext_properties.replace("_", "").upper()
             else:
                 temp = pps.panelSpace.replace("_", "")
-            txt_blIdname_p = temp + '_PT_sample_panel'
+            txt_blIdname_p = temp + '_PT_hello_world_panel'
             txt_blOptions_p = "#bl_options =  {'DEFAULT_CLOSED'}\n"
             
-            txt_panelPlace = self.getPanelPlace(context)
-            txt = txt_panel % ("SamplePanel", '"ToolTip"', txt_blIdname_p, "Sample Panel", txt_blOptions_p, txt_panelPlace, "SampleOperator")
+            txt_panelPlace = self.getPanelPlace(context)[4:]
+            txt = txt_panel % ("HelloWorldPanel", '"ToolTip of HelloWorldPanel"', txt_blIdname_p, "Hello World Panel", txt_blOptions_p, txt_panelPlace, "HelloWorldOperator")
+        
         elif pps.snippetSample == "Props(Operator)":
             txt = txt_props
         
         elif pps.snippetSample == "PropGroup":
             txt = "class MySceneProps(bpy.types.PropertyGroup):\n" + txt_props
             txt += "bpy.utils.register_class(MySceneProps)\n"
-            txt += "bpy.types.Scene.sample_code_props = PointerProperty(type = MySceneProps)\n"
+            txt += "bpy.types.Scene.addongen_hello_world_props = PointerProperty(type = MySceneProps)\n"
         
         elif pps.snippetSample == "CollectProp":
             txt = txt_collectionProp
             
         elif pps.snippetSample == "bl_info":
-            txt = txt_blInfo % "Sample Addon"
+            txt = txt_blInfo % "Hello World"
         
         elif pps.snippetSample == "MenuFunc":
             txt += "def menu_func(self, context):\n"
-            txt += "    self.layout.operator(SampleOperator.bl_idname, icon = 'PLUGIN')\n"
+            txt += "    self.layout.operator(HelloWorldOperator.bl_idname, icon = 'PLUGIN')\n"
             txt += "#bpy.types.VIEW3D_MT_object.append(menu_func) #put in register()\n"
             txt += "#bpy.types.VIEW3D_MT_object.remove(menu_func) #put in unregister()\n"
 
         elif pps.snippetSample == "Register" or pps.snippetSample == "RegKeymap":
-            temp1 = "bpy.utils.register_class(SampleOperator)"
-            temp1 += "\n    #bpy.utils.register_class(SamplePanel)"
+            temp1 = "bpy.utils.register_class(HelloWorldOperator)"
+            temp1 += "\n    #bpy.utils.register_class(HelloWorldPanel)"
             temp1 += "\n    #bpy.types.VIEW3D_MT_object.append(menu_func)"
-            temp2 = "bpy.utils.unregister_class(SampleOperator)"
-            temp2 += "\n    #bpy.utils.unregister_class(SamplePanel)"
+            temp2 = "bpy.utils.unregister_class(HelloWorldOperator)"
+            temp2 += "\n    #bpy.utils.unregister_class(HelloWorldPanel)"
             temp2 += "\n    #bpy.types.VIEW3D_MT_object.remove(menu_func)"
             
             if pps.snippetSample == "Register":
                 txt += txt_reg % (temp1, temp2)
             else:
-                txt += txt_reg_keymap % (temp1, 'SampleOperator', temp2)
+                txt += txt_reg_keymap % (temp1, 'HelloWorldOperator', temp2)
             
         elif pps.snippetSample == "GPL":
             txt = txt_GPL
         
         return txt
 
-    #---- #CURRENT
+    #---- 
     def getPanelPlace(self, context):
         pps = context.scene.chichige_add_snippet_props
                 
@@ -469,17 +563,30 @@ class AddSnippetOp_Samples(bpy.types.Operator):
          
         return txt
     
-    
-####################################################################################        
-#TODO: UILayout method sample
-#TODO : Clear all, def, full Button
+    #---- 
+    def getUILayoutMembers(self, context):
+        pps = context.scene.chichige_add_snippet_props
+        
+        txt = pps.uiLayoutMembers
+        if pps.isAddUILayoutParams:
+            txt = self.uiLayoutParamDic[txt] + "\n"
+        elif not txt.endswith('()'):
+            txt += " = "
+        return txt
+        
+
+#################################################################################### 
 class BookmarkOp(bpy.types.Operator):
-    """ToolTip"""
-    bl_idname = "addongen.sample_operator"
-    bl_label = "Sample Operator"
+    """Jump to where the text is written"""
+    bl_idname = "chichige.bookmark_operator"
+    bl_label = "Bookmark Operator"
     bl_options = {'REGISTER'}
 
-    type = StringProperty()
+    type = EnumProperty(items = [('ADD', 'Add', 'Add new bookmark'), 
+                                 ('REMOVE', 'Remove', 'Remove a bookmark'),
+                                 ('GO', 'Go', 'Find the text and go to there'),
+                                 ('SHIFT_DOWN', 'SHiftDown', 'Move entire bookmarks down a row'),
+                                 ('SHIFT_UP', 'ShiftUp', 'Move entrie bookmaks up a row')])
     bmText = StringProperty()
     removeID = IntProperty()
     
@@ -498,8 +605,8 @@ class BookmarkOp(bpy.types.Operator):
             findWrap = sd.use_find_wrap
             
             sd.find_text = self.bmText
-            sd.use_match_case = False
-            sd.use_find_all = False
+            sd.use_match_case = True
+            sd.use_find_all = pps.isBookmarkFindAll
             sd.use_find_wrap = True
             try:           
                 bpy.ops.text.find()
@@ -512,8 +619,26 @@ class BookmarkOp(bpy.types.Operator):
                 sd.find_text = findText
                 sd.use_match_case = matchCase
                 sd.use_find_all = findAll
-                sd.use_find_wrap = findWrap          
+                sd.use_find_wrap = findWrap
         
+        elif self.type == "SHIFT_DOWN": 
+            if len(pps.bookmarks) < 20:
+                pps.bookmarks.add()
+                 
+            for i in range(len(pps.bookmarks) - 1, -1, -1):
+                if i != 0:
+                    pps.bookmarks[i].bmText = pps.bookmarks[i - 1].bmText
+                else:
+                    pps.bookmarks[i].bmText = ""
+
+        elif self.type == "SHIFT_UP":  
+            for i in range(len(pps.bookmarks)):
+                if i != len(pps.bookmarks) - 1:
+                    pps.bookmarks[i].bmText = pps.bookmarks[i + 1].bmText
+                else:
+                    pps.bookmarks[i].bmText = ""
+        
+                        
         return {'FINISHED'}
     
 
@@ -531,7 +656,13 @@ class AddSnippetPanel(bpy.types.Panel):
         pps = context.scene.chichige_add_snippet_props
         
         layout.prop(pps, 'isClipboard')
+        
         layout.label('Properties' + '-' * 80)
+        row = layout.row(align = True)
+        row.operator(AddSnippetOp_Props.bl_idname, text = "ClearAll").type = "CHECK_CLEAR"
+        row.operator(AddSnippetOp_Props.bl_idname, text = "AddonDefault").type = "CHECK_DEFAULT"
+        row.operator(AddSnippetOp_Props.bl_idname, text = "SelectAll").type = "CHECK_ALL"
+        
         col = layout.column(align = True)
         box = col.box()
         row = box.row()
@@ -588,8 +719,13 @@ class AddSnippetPanel(bpy.types.Panel):
         layout.label('Code Samples' + '-' * 80)
         row = layout.row(align = True)
         row.prop(pps, 'snippetSample', text="")
-        row.enabled = pps.snippetSample != 'SEPARATOR'
-        row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "CodeSamples"
+        
+        #row = row.row() #I want the button to be sticked to enum list. This way slightly separates. 
+        #row.enabled = not pps.uiLayoutMembers.startswith('SEPA')
+        if not pps.snippetSample.startswith('SEPA'):
+            row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "CodeSamples"
+        else:
+            row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
 
         # Panel Place ------
         layout.separator()
@@ -621,12 +757,11 @@ class AddSnippetPanel(bpy.types.Panel):
                 colCombo.prop(pps, "panelRegion_node", text = "")
             else:
                 colCombo.label("UI")
-            
-            #JUMP
+
             if pps.panelSpace == 'VIEW_3D':
                 colLabel.label("Context:")
                 colCombo.prop(pps, "panelContext_view3d", text = "")
-                if pps.panelRegion_view3d_clip == 'TOOLS': # and pps.panelContext_view3d != 'NO': 
+                if pps.panelRegion_view3d_clip == 'TOOLS':
                     colLabel.label("Tab:")
                     if pps.panelContext_view3d == 'objectmode':
                         colCombo.prop(pps, "panelCategory_objectmode", text = "")
@@ -651,6 +786,20 @@ class AddSnippetPanel(bpy.types.Panel):
         row.enabled = not pps.panelSpace.startswith('SEPA')
         row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "PanelPlace"
         
+        #JUMP
+        # UILayoutM Members ------
+        layout.separator()
+        layout.label('UILayout Members' + '-' * 80)
+        layout.prop(pps, "isAddUILayoutParams", text = "Includes all parameters")
+        row = layout.row(align = True)
+        row.prop(pps, 'uiLayoutMembers', text="")
+        #row = row.row() #I want the button to be sticked to enum list. This way slightly separates. 
+        #row.enabled = not pps.uiLayoutMembers.startswith('SEPA')
+        if not pps.uiLayoutMembers.startswith('SEPA'):
+            row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "UILayoutMembers"
+        else:
+            row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
+
         # Bookmarks ------------
         layout.separator()
         box = layout.box()
@@ -684,6 +833,15 @@ class AddSnippetPanel(bpy.types.Panel):
                 opProps = row.operator(BookmarkOp.bl_idname, text = "", icon = 'VIEWZOOM')
                 opProps.type = 'GO'
                 opProps.bmText = bm.bmText
+            
+            col.separator()
+            row = col.row()
+            split = row.split(0.1)
+            split.label("")
+            row = split.split(0.8).row()
+            row.prop(pps, "isBookmarkFindAll")
+            row.operator(BookmarkOp.bl_idname, text = "", icon = "MOVE_UP_VEC").type = "SHIFT_UP"
+            row.operator(BookmarkOp.bl_idname, text = "", icon = "MOVE_DOWN_VEC").type = "SHIFT_DOWN"
                 
        
 
@@ -714,10 +872,6 @@ def convertToItems_prop(itemsList):
             retVal.append((item, item.replace("_", " ").title().replace(" ", ""), ""))
     return retVal
 
-#-----
-class BookmarkCollection(bpy.types.PropertyGroup):
-    bmText = bpy.props.StringProperty(name="Test Prop")
-    
 #-----
 def getPanelRegionItems_view3d_clip(self, context):
     return convertToItems_panelRegion(['TOOLS', 'TOOL_PROPS', 'UI'])
@@ -755,25 +909,44 @@ def convertToItems_panelCategory(itemsList = None):
     return retVal
 
 #-----
-class AddSnippetProps(bpy.types.PropertyGroup):
-    isAddRefComment = BoolProperty(name = "#Ref",       description = "Add reference line as comment", default = False)
-    isAddPrefix =     BoolProperty(name = "prefix",     description="Add bpy.props at first",      default = True)
-    isAddName =       BoolProperty(name = "name",       description = "Add name",                  default = True)
-    isAddDesc =       BoolProperty(name = "desc",       description = "Add description",           default = True)
-    isAddDefault =    BoolProperty(name = "default",    description = "Add default",               default = True)
-    isAddMinMax =     BoolProperty(name = "min,max",     description = "Add min and max (maxlen for string)", default = True)
-    isAddSoftMinMax = BoolProperty(name = "soft_min,max", description = "Add soft_min and soft_max", default = False)
-    isAddStep =       BoolProperty(name = "step",       description = "Add step",                  default = False)
-    isAddSize =       BoolProperty(name = "size",       description = "Add size",                  default = False)
-    isAddUpdate =     BoolProperty(name = "update",     description = "Add update",                default = False)
+def getUILayoutMemberItems(self, context):
+    items = ['row()', 'column()', 'column_flow()', 'box()', 'split()',
+             'SEPARATOR1', 'label()', 'menu()', 'separator()', 
+             'SEPARATOR2', 'prop()', 'prop_menu_enum()', 'prop_enum()', 'prop_search()', 'props_enum()',
+             'SEPARATOR3', 'operator()', 'operator_enum()', 'operator_menu_enum()',
+             'SEPARATOR4', 'active', 'alert', 'alignment', 'enabled', 'scale_x', 'scale_y', 'operator_context']
+    retVal = []
+    for item in items:
+        if item.startswith('SEPA'):
+            retVal.append((item, '-' * 30, ""))
+        else:
+            retVal.append((item, item, ""))
+    return retVal
+#----
+class BookmarkCollection(bpy.types.PropertyGroup):
+    bmText = bpy.props.StringProperty(name="BookmarkText")
     
-    propOptions =    EnumProperty(items = getItems_propOptions,     name = "PropOptions",       description = "", options = {'ENUM_FLAG'})
-    propSubtype =    EnumProperty(items = getItems_propSubtype,     name = "PropSubtype",       description = "")
-    propVecSubtype = EnumProperty(items = getItems_propVecSubtype,  name = "PropVecSubtype",    description = "")
+#REF
+#-----
+class AddSnippetProps(bpy.types.PropertyGroup):
+    isAddRefComment = BoolProperty(name = "#Ref",         description = "Add reference line as comment", default = False)
+    isAddPrefix =     BoolProperty(name = "prefix",       description = "Add bpy.props at first",        default = True)
+    isAddName =       BoolProperty(name = "name",         description = "Add name",                      default = True)
+    isAddDesc =       BoolProperty(name = "desc",         description = "Add description",               default = True)
+    isAddDefault =    BoolProperty(name = "default",      description = "Add default",                   default = True)
+    isAddMinMax =     BoolProperty(name = "min,max",      description = "Add min and max (maxlen for String)", default = True)
+    isAddSoftMinMax = BoolProperty(name = "soft_min,max", description = "Add soft_min and soft_max",     default = False)
+    isAddStep =       BoolProperty(name = "step",         description = "Add step",                      default = False)
+    isAddSize =       BoolProperty(name = "size",         description = "Add size",                      default = False)
+    isAddUpdate =     BoolProperty(name = "update",       description = "Add update",                    default = False)
+    
+    propOptions =    EnumProperty(items = getItems_propOptions,     name = "PropOptions",       description = "options of Property", options = {'ENUM_FLAG'})
+    propSubtype =    EnumProperty(items = getItems_propSubtype,     name = "PropSubtype",       description = "subtype of Property")
+    propVecSubtype = EnumProperty(items = getItems_propVecSubtype,  name = "PropVecSubtype",    description = "subtype of VectorProperty")
 
-    isAddFloatPrec = BoolProperty(name = "precision", description = "Add precision", default = False)
-    floatUnit =      EnumProperty(items = getItems_floatUnit,       name = "FloatUnit",         description = "")
-    stringSubtype =  EnumProperty(items = getItems_stringSubtype,   name = "StringSubtype",     description = "")
+    isAddFloatPrec = BoolProperty(name = "precision", description = "Add precision to FloatProperty",   default = False)
+    floatUnit =      EnumProperty(items = getItems_floatUnit,       name = "unit",    description = "unit of FloatProperty")
+    stringSubtype =  EnumProperty(items = getItems_stringSubtype,   name = "subtype",     description = "subtype of StringProperty")
     isAddEnumFlag =  BoolProperty(name = "ENUM_FLAG", description = "Add ENUM_FLAG to options", default = False)
     
     isClipboard = BoolProperty(name = "Copy to Clipboard instead of Insertion")
@@ -829,7 +1002,8 @@ class AddSnippetProps(bpy.types.PropertyGroup):
                                                 ('weightpaint',   'Weight Paint',  '', 'WPAINT_HLT', 14),
                                                 ('vertexpaint',   'Vertex Paint',  '', 'VPAINT_HLT', 15),
                                                 ('particlemode',  'Particle Mode', '', 'PARTICLEMODE', 16)],
-                                        name = "Context", description = "bl_context of Panel class")
+                                        name = "Context", 
+                                        description = "bl_context of Panel class")
     panelContext_properties = EnumProperty(items = [('render',       'Render',      '', 'SCENE', 3),
                                                    ('render_layer', 'RenderLayer', '', 'RENDERLAYERS', 4),
                                                    ('scene',        'Scene',       '', 'SCENE_DATA', 5),
@@ -842,14 +1016,20 @@ class AddSnippetProps(bpy.types.PropertyGroup):
                                                    ('texture',      'Texture',     '', 'TEXTURE', 12),
                                                    ('particles',    'Particles',   '', 'PARTICLES', 13),
                                                    ('physics',      'Physics',     '', 'PHYSICS', 14)],
-                                        name = "Context", description = "bl_context of Panel class")
+                                        name = "Context", 
+                                        description = "bl_context of Panel class")
 
     panelCategory_objectmode = EnumProperty(items = getPanelCategoryItems_objectmode, name = "Tab", description = "bl_category of Panel class")
     panelCategory_editmode =   EnumProperty(items = getPanelCategoryItems_editmode,   name = "Tab", description = "bl_category of Panel class")
     panelCategory_others =     EnumProperty(items = getPanelCategoryItems_others,     name = "Tab", description = "bl_category of Panel class")
-                                 
+    
+    isAddUILayoutParams = BoolProperty(name = "Add All Parameters", description = "Includes all parameters if checked")
+    uiLayoutMembers = EnumProperty(items = getUILayoutMemberItems, name = "Members of UILayout", description = "Reminder purpose")
+                                  
     isUseBookmark = BoolProperty()                             
+    isBookmarkFindAll = BoolProperty(name = "Find All", description = "Search All Files for the Bookmark")                             
     bookmarks = CollectionProperty(type = BookmarkCollection)
+
 
 
 ####################################################################################        
@@ -871,16 +1051,16 @@ def register():
     bpy.types.TEXT_MT_templates.append(menu_func)
 
 def unregister():
+    bpy.utils.unregister_class(BookmarkCollection)
+    bpy.utils.unregister_class(AddSnippetProps)
+    #del bpy.types.Scene.chichige_add_snippet_props
+
     bpy.utils.unregister_class(AddonTemplateGeneratorOp)
     bpy.utils.unregister_class(AddSnippetOp_Props)
     bpy.utils.unregister_class(AddSnippetOp_Samples)
     bpy.utils.unregister_class(BookmarkOp)
     bpy.utils.unregister_class(AddSnippetPanel)
     bpy.types.TEXT_MT_templates.remove(menu_func)
-
-    bpy.utils.unregister_class(BookmarkCollection)
-    bpy.utils.unregister_class(AddSnippetProps)
-    del bpy.types.Scene.chichige_add_snippet_props
     
 if __name__ == "__main__":
     register()
@@ -953,7 +1133,7 @@ class %s(bpy.types.Operator):
     #    return context.object is not None
     
     def execute(self, context):
-        self.report({'INFO'}, "Test Operator")
+        self.report({'INFO'}, "Hello World!")
         return {'FINISHED'}
     
     #def invoke(self, context, event):
@@ -975,7 +1155,7 @@ class %s(bpy.types.Panel):
     
     def draw(self, context):
         layout = self.layout
-        layout.operator(%s.bl_idname, text = "Test", icon = 'BLENDER')
+        layout.operator(%s.bl_idname, text = "Hello World", icon = 'BLENDER')
 
 """
 
@@ -1018,18 +1198,18 @@ if __name__ == "__main__":
 
 
 txt_collectionProp = """\
-class MySceneItems(bpy.types.PropertyGroup):
-    name = bpy.props.StringProperty(name="Test Prop", default="Unknown")
-    value = bpy.props.IntProperty(name="Test Prop", default=22)
+class MySceneCollection(bpy.types.PropertyGroup):
+    name = bpy.props.StringProperty(name="Test Prop Name", default="Unknown")
+    value = bpy.props.IntProperty(name="Test Prop Value",  default=22)
 
-bpy.utils.register_class(MySceneItems)
-bpy.types.Scene.sample_code_items = bpy.props.CollectionProperty(type = MySceneItems)
+bpy.utils.register_class(MySceneCollection)
+bpy.types.Scene.addongen_hello_world_collection = bpy.props.CollectionProperty(type = MySceneCollection)
 
-my_item = bpy.context.scene.sample_code_items.add()
+my_item = bpy.context.scene.addongen_hello_world_collection.add()
 my_item.name = "Spam"
 my_item.value = 1000
 
-my_item = bpy.context.scene.sample_code_items.add()
+my_item = bpy.context.scene.addongen_hello_world_collection.add()
 my_item.name = "Eggs"
 my_item.value = 30
 """
