@@ -1,17 +1,16 @@
 bl_info = {
     "name": "Addon Template Generator",
     "author": "chichige-bobo",
-    "version": (0, 9),
+    "version": (0, 9, 2),
     "blender": (2, 69, 0),
-    "location": "TextEditor > Templates > AddonTemplateGenerator, TextEditor > PropertiesBar > AddSnippet",
+    "location": "TextEditor > Templates > AddonTemplateGenerator, TextEditor > PropertiesBar > AddSnippet/Bookmarks",
     "description": "Generate empty addon template. Add snippet of propertes and samples",
     "warning": "not much tested yet",
     "wiki_url": "",
     "tracker_url": "",
     "category": "Development"}
 
-#TODO : Listup used keymapping
-#TODO : Enum of keymap combination
+#TODO : snippet of keymap for menu
 
 # LET USERS TO MANIPULATE AFTER GENERATED, NOT COMPLETE AT DIALOG
 import bpy
@@ -338,7 +337,7 @@ class AddSnippetOp_Props(bpy.types.Operator):
 
         return {'FINISHED'}
     
-    #CURRENT
+  
     def changeCheckState(self, context):
         pps = context.scene.chichige_add_snippet_props
         if self.type == "CHECK_CLEAR":
@@ -362,33 +361,6 @@ class AddSnippetOp_Props(bpy.types.Operator):
             pps.propSubtype =  pps.propVecSubtype = pps.floatUnit = pps.stringSubtype =  'NONE'
             pps.isAddFloatPrec = pps.isAddEnumFlag =  True
         
-    def changeCheckState2(self, context):
-        pps = context.scene.chichige_add_snippet_props
-        if self.type == "CHECK_CLEAR":
-            pps.isAddRefComment = False
-            pps.isAddPrefix = False
-            pps.isAddName = False
-            pps.isAddDesc = False
-            pps.isAddDefault = False
-            pps.isAddMinMax = False
-            pps.isAddSoftMinMax = False
-            pps.isAddStep = False
-            pps.isAddSize = False
-            pps.isAddUpdate = False
-            
-            pps.propOptions = None
-            pps.propSubtype = '-- Subtype --'
-            pps.propVecSubtype = '-- VecSub --'
-        
-            pps.isAddFloatPrec = False
-            pps.floatUnit = '-- Unit --'
-            pps.stringSubtype =  '-- Subtype --'
-            pps.isAddEnumFlag =  False
-        elif self.type == "CHECK_DEFAULT":
-            pass
-        elif self.type == "CHECK_ALL":
-            pass
-
         
 ####################################################################################        
 class AddSnippetOp_Samples(bpy.types.Operator):
@@ -400,7 +372,9 @@ class AddSnippetOp_Samples(bpy.types.Operator):
     type = EnumProperty(items = [('CodeSamples', 'CodeSamples', 'Insert/Copy selected sample'), 
                                  ('PanelPlace', 'PanelPlace', 'Insert/Copy selected place'),
                                  ('UILayoutMembers', 'UILayoutMembers', 'Insert/Copy selected member'),
-                                 ('INEFFECTIVE', 'INEFFECTIVE', 'Separator selected. Do nothing.')])
+                                 ('INEFFECTIVE', 'INEFFECTIVE', 'Separator selected. Do nothing.'),
+                                 ('Keymap', 'Keymap', 'Insert/Copy keymap combination.'),
+                                 ('CheckKeymapConflicts', 'CheckKeymapConflicts', 'Check conflicts then print to console')])
     
     uiLayoutParamDic = {'active':               'active = False', 
                         'alert' :               'alert = False',
@@ -437,6 +411,11 @@ class AddSnippetOp_Samples(bpy.types.Operator):
             txt = self.getUILayoutMembers(context)
         elif self.type == 'INEFFECTIVE':
             return {'CANCELLED'}
+        elif self.type == 'Keymap':
+            txt = self.getKeymap(context)
+        elif self.type == 'CheckKeymapConflicts':
+            self.checkKeymapConflicts(context)
+            return {'FINISHED'}       
         
         if pps.isClipboard:
             context.window_manager.clipboard = txt
@@ -573,10 +552,90 @@ class AddSnippetOp_Samples(bpy.types.Operator):
         elif not txt.endswith('()'):
             txt += " = "
         return txt
+    
+    #CURRENT_Operator
+    #-----
+    def getKeymap(self, context):
+        pps = context.scene.chichige_add_snippet_props
+        txt = ""
+        txt += "#addon_keymaps = [] #put on out of register()\n"
+
+        txt += "    wm = bpy.context.window_manager\n"
+        txt += "    km = wm.keyconfigs.addon.keymaps.new(name = '%s', space_type = '%s'%s%s)\n" % (pps.kmName, pps.kmSpaceType, ("" if pps.kmRegionType == "WINDOW" else ", region_type = '%s'" % pps.kmRegionType), (", modal = True" if pps.kmIsModal else ""))
+        txtKeys = (", any=True" if pps.kmiKeysBit & 1 else "") + (", shift=True" if pps.kmiKeysBit & 2 else "") + (", ctrl=True" if pps.kmiKeysBit & 4 else "") + (", alt=True" if pps.kmiKeysBit & 8 else "") + (", oskey=True" if pps.kmiKeysBit & 16 else "")
+        if not pps.kmIsModal:
+            txt += "    kmi = km.keymap_items.new(HelloWorldOperator.bl_idname"
+        else:
+            txt += "    kmi = km.keymap_items.new_modal('CONFIRM'"    
+        txt += ", '%s', '%s'%s%s)\n" % (pps.kmiType, (pps.kmiValue if pps.kmiType != 'TEXTINPUT' else 'NOTHING'), txtKeys, ("" if pps.kmiKeyMod == 'NONE' else ", key_modifier = '%s'" % pps.kmiKeyMod))
+        txt += "    #kmi.properties.my_prop = 'some'\n"
+        txt += "    addon_keymaps.append((km, kmi))\n"
+        return txt
+
+            
+    def checkKeymapConflicts(self, context):
+        pps = context.scene.chichige_add_snippet_props
+        keys = []
+        keys.append('Any') if pps.kmiKeysBit & 1 else None
+        keys.append('Shift') if pps.kmiKeysBit & 2 else None
+        keys.append('Ctrl') if pps.kmiKeysBit & 4 else None
+        keys.append('Alt') if pps.kmiKeysBit & 8 else None
+        keys.append('Oskey') if pps.kmiKeysBit & 16 else None
+
+        text = ""
+        text += "####################################################\n"
+        text += "######### KEYMAP CONFLICTS CHECKER #################\n"
+        text += "####################################################\n"
+        text += " Mark as 'Similar' If map_type and type are equal but other props \n"
+        text += " Note :I couldn't understand keymap well. This checker is unreliable.\n\n"
+        text += "====================================================\n"
+        text += " Haystack : keyconfigs.user.keymaps[%s].keymap_items\n" % pps.kmName
+        text += " Subject  : "
+        if pps.kmiMapType in {'TEXTINPUT', 'TIMER'}:
+            text += "%s%s\n" % (pps.kmiMapType, (", " + pps.kmiType if pps.kmiMapType == 'TIMER' else ""))
+        else:
+            text += "%s, %s, %s, %s, mod: %s\n" % (pps.kmiMapType, pps.kmiType, pps.kmiValue, keys, pps.kmiKeyMod)
+        text += "====================================================\n\n"
+        
+        matchText = ""
+        similarText = ""
+        matchTitle =   " < MATCH > : "
+        similarTitle = "  Similar  : "
+        
+        kc = context.window_manager.keyconfigs.user
+        for km in kc.keymaps:
+            if km.name == pps.kmName:
+                break
+            
+        for kmi in km.keymap_items:
+            if kmi.map_type == pps.kmiMapType and (kmi.map_type == 'TEXTINPUT' or (kmi.map_type != 'TEXTINPUT' and kmi.type == pps.kmiType)):
+                
+                tempText = "%s (%s%s" % ((kmi.propvalue if km.is_modal else kmi.name), kmi.map_type, (", " + kmi.type if kmi.map_type != 'TEXTINPUT' else ""))
+                
+                if kmi.map_type in {'TEXTINPUT', 'TIMER'}:
+                    matchText += matchTitle + tempText + ")\n"
+                else:
+                    keys = []
+                    keys.append('Any') if kmi.any else None
+                    keys.append('Shift') if kmi.shift else None
+                    keys.append('Ctrl') if kmi.ctrl else None
+                    keys.append('Alt') if kmi.alt else None
+                    keys.append('Oskey') if kmi.oskey else None
+                    tempText += ", %s, %s, mod: %s)\n" % (kmi.value, keys, kmi.key_modifier)
+                    
+                    keysBit = (2 if kmi.shift else 0) | (4 if kmi.ctrl else 0) | (8 if kmi.alt else 0) | (16 if kmi.oskey else 0)                    
+                    if kmi.value == pps.kmiValue and keysBit == (pps.kmiKeysBit & 30) and kmi.key_modifier == pps.kmiKeyMod:
+                        matchText += matchTitle + tempText
+                    else:                    
+                        similarText += similarTitle + tempText
+                        
+        text += matchText if matchText else matchTitle + " (Not found)\n"
+        text += similarText if similarText else similarTitle + " (Not found)\n" 
+        print(text)
         
 
 #################################################################################### 
-class BookmarkOp(bpy.types.Operator):
+class ChichigeBookmarkOp(bpy.types.Operator):
     """Jump to where the text is written"""
     bl_idname = "chichige.bookmark_operator"
     bl_label = "Bookmark Operator"
@@ -622,7 +681,7 @@ class BookmarkOp(bpy.types.Operator):
                 sd.use_find_wrap = findWrap
         
         elif self.type == "SHIFT_DOWN": 
-            if len(pps.bookmarks) < 20:
+            if len(pps.bookmarks) < 20 and (len(pps.bookmarks) > 0 and pps.bookmarks[-1].bmText != ""):
                 pps.bookmarks.add()
                  
             for i in range(len(pps.bookmarks) - 1, -1, -1):
@@ -636,7 +695,7 @@ class BookmarkOp(bpy.types.Operator):
                 if i != len(pps.bookmarks) - 1:
                     pps.bookmarks[i].bmText = pps.bookmarks[i + 1].bmText
                 else:
-                    pps.bookmarks[i].bmText = ""
+                    pps.bookmarks.remove(i)
         
                         
         return {'FINISHED'}
@@ -786,7 +845,6 @@ class AddSnippetPanel(bpy.types.Panel):
         row.enabled = not pps.panelSpace.startswith('SEPA')
         row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "PanelPlace"
         
-        #JUMP
         # UILayoutM Members ------
         layout.separator()
         layout.label('UILayout Members' + '-' * 80)
@@ -799,52 +857,87 @@ class AddSnippetPanel(bpy.types.Panel):
             row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "UILayoutMembers"
         else:
             row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
-
-        # Bookmarks ------------
+        
+        #CURRENT_PANEL
+        # Keymapping ------
+        # prop(full_event = True) not worked despite effort with various EnumProperty settings.
+        # propvalue (used when km.is_modal is true) can't be filtered out the value. so, just hide it.
         layout.separator()
-        box = layout.box()
-        headRow = box.row(align = True)
-        if not pps.isUseBookmark:
-            headRow.prop(pps, "isUseBookmark", text = "", icon = 'TRIA_RIGHT', emboss = False)
-            headRow.label('Bookmarks' + '-' * 50) 
-        else:
-            headRow.prop(pps, "isUseBookmark", text = "", icon = 'TRIA_DOWN', emboss = False)
-            headRow.label('Bookmarks' + '-' * 40)
-            row = headRow.row() 
-            row.enabled = len(pps.bookmarks) < 20
-            row.operator(BookmarkOp.bl_idname, text = "", icon = "ZOOMIN").type = "ADD"
-            
-            col = box.column(align = True)
-            for i in range(len(pps.bookmarks)):
-                bm = pps.bookmarks[i]
-                
-                if i % 5 == 0 and i != 0:
-                    col.separator()
-                row = col.row(align = True)
-                                
-                opProps = row.operator(BookmarkOp.bl_idname, text = "", icon = 'PANEL_CLOSE', emboss = False)
-                opProps.type = "REMOVE"
-                opProps.removeID = i
- 
-                row.prop(bm, "bmText", text = "")
-                
-                row = row.row()
-                row.enabled = bm.bmText.strip() != ""
-                opProps = row.operator(BookmarkOp.bl_idname, text = "", icon = 'VIEWZOOM')
-                opProps.type = 'GO'
-                opProps.bmText = bm.bmText
-            
-            col.separator()
-            row = col.row()
-            split = row.split(0.1)
-            split.label("")
-            row = split.split(0.8).row()
-            row.prop(pps, "isBookmarkFindAll")
-            row.operator(BookmarkOp.bl_idname, text = "", icon = "MOVE_UP_VEC").type = "SHIFT_UP"
-            row.operator(BookmarkOp.bl_idname, text = "", icon = "MOVE_DOWN_VEC").type = "SHIFT_DOWN"
-                
-       
+        layout.label('Keymapping' + '-' * 80)        
+        layout.prop(pps, "kmName", text = "")
+        layout.label("(%s, %s, Modal: %s)" % (pps.kmSpaceType, pps.kmRegionType, pps.kmIsModal))
+        layout.separator()
+        #if not pps.kmIsModal:
+        #    layout.prop(pps, "kmiIdName", text = "idname")
+        #else:
+        #    layout.prop(pps, "kmiPropVal", text = "PropVal")
+        layout.prop(pps, "kmiMapType", text = "MapType")
+        if pps.kmiMapType != 'TEXTINPUT':
+            layout.prop(pps, "kmiType", text = "Type")
+            if pps.kmiMapType != 'TIMER':
+                layout.prop(pps, "kmiValue", text = "Value")
+                row = layout.row()
+                row.prop(pps, "isKmiAny")                
+                row.prop(pps, "isKmiShift")                
+                row.prop(pps, "isKmiCtrl")                
+                row.prop(pps, "isKmiAlt")                
+                row.prop(pps, "isKmiOskey")                
+                layout.prop(pps, "kmiKeyMod")
+        split = layout.split(0.9)
+        split.label("")
+        row = split.row()
+        row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "Keymap"
+        layout.separator()
+        layout.operator(AddSnippetOp_Samples.bl_idname, text="Check Confilicts to Console").type = 'CheckKeymapConflicts'
 
+###########################################################                
+class ChichigeBookmarkPanel(bpy.types.Panel):
+    """Panel for Bookmarks"""
+    bl_idname = "TEXTEDITOR_PT_chichige_bookmark_panel"
+    bl_label = "Bookmarks"
+    
+    bl_space_type = 'TEXT_EDITOR'
+    bl_region_type = 'UI'
+    
+    def draw(self, context):
+        layout = self.layout
+        pps = context.scene.chichige_add_snippet_props
+
+        col = layout.column(align = True)
+        row = col.row()
+        split = row.split(0.05)
+        split.label("")
+        row = split.split(0.9).row()
+        row.prop(pps, "isBookmarkFindAll")
+        row.operator(ChichigeBookmarkOp.bl_idname, text = "", icon = "MOVE_UP_VEC").type = "SHIFT_UP"
+        row.operator(ChichigeBookmarkOp.bl_idname, text = "", icon = "MOVE_DOWN_VEC").type = "SHIFT_DOWN"
+        row.separator()
+        row = row.row()
+        row.enabled = len(pps.bookmarks) < 20
+        row.operator(ChichigeBookmarkOp.bl_idname, text = "New", icon = "ZOOMIN").type = "ADD"
+
+        col.separator()
+        for i in range(len(pps.bookmarks)):
+            bm = pps.bookmarks[i]
+            
+            if i % 5 == 0 and i != 0:
+                col.separator()
+            row = col.row(align = True)
+                            
+            opProps = row.operator(ChichigeBookmarkOp.bl_idname, text = "", icon = 'PANEL_CLOSE', emboss = False)
+            opProps.type = "REMOVE"
+            opProps.removeID = i
+ 
+            row.prop(bm, "bmText", text = "")
+            
+            row = row.row()
+            row.enabled = bm.bmText.strip() != ""
+            opProps = row.operator(ChichigeBookmarkOp.bl_idname, text = "", icon = 'VIEWZOOM')
+            opProps.type = 'GO'
+            opProps.bmText = bm.bmText
+        
+            
+            
 ####################################################################################
 # Scene item funcs, props ----
 
@@ -890,17 +983,19 @@ def convertToItems_panelRegion(itemsList = None):
 
 #----------
 def getPanelCategoryItems_objectmode(self, context):
-    return convertToItems_panelCategory(['Create', 'Basic', 'Animation', 'Physics', 'History'])
+    return convertToItems_panelCategory(['Tools', 'Create', 'Basic', 'Animation', 'Physics', 'History'], isOmitOptions = True)
 
 def getPanelCategoryItems_editmode(self, context):
-    return convertToItems_panelCategory(['Create', 'Basic'])
+    return convertToItems_panelCategory(['Tools', 'Create', 'Basic', 'Shading / UVs'])
 
 def getPanelCategoryItems_others(self, context):#header only
-    return convertToItems_panelCategory()
+    return convertToItems_panelCategory(['Tools'])
 
-def convertToItems_panelCategory(itemsList = None):
+def convertToItems_panelCategory(itemsList = None, isOmitOptions = False):
     if not itemsList:
         itemsList = []
+    if not isOmitOptions:
+        itemsList.append('Options')
     itemsList.append('Grease Pencil')
     itemsList.append('Relations')
     retVal = [('NO', '-- none --', '')]
@@ -922,11 +1017,142 @@ def getUILayoutMemberItems(self, context):
         else:
             retVal.append((item, item, ""))
     return retVal
+
 #----
 class BookmarkCollection(bpy.types.PropertyGroup):
     bmText = bpy.props.StringProperty(name="BookmarkText")
     
-#REF
+#------keymapping-------
+def update_kmName(self, context):
+    pps = context.scene.chichige_add_snippet_props
+    kc = context.window_manager.keyconfigs.user
+    
+    for km in kc.keymaps:
+        if km.name == pps.kmName:
+            pps.kmSpaceType = km.space_type
+            pps.kmRegionType = km.region_type
+            pps.kmIsModal = km.is_modal
+
+def get_kmiAny(self):
+    pps = bpy.context.scene.chichige_add_snippet_props
+    return pps.kmiKeysBit & 1
+def set_kmiAny(self, value):
+    pps = bpy.context.scene.chichige_add_snippet_props
+    pps.kmiKeysBit = 31 if value else 0
+
+def get_kmiShift(self):
+    pps = bpy.context.scene.chichige_add_snippet_props
+    return pps.kmiKeysBit & 2
+def set_kmiShift(self, value):
+    setBitToKmiKeysBit(value, 2)
+
+
+def get_kmiCtrl(self):
+    pps = bpy.context.scene.chichige_add_snippet_props
+    return pps.kmiKeysBit & 4
+def set_kmiCtrl(self, value):
+    setBitToKmiKeysBit(value, 4)
+
+def get_kmiAlt(self):
+    pps = bpy.context.scene.chichige_add_snippet_props
+    return pps.kmiKeysBit & 8
+def set_kmiAlt(self, value):
+    setBitToKmiKeysBit(value, 8)
+
+def get_kmiOskey(self):
+    pps = bpy.context.scene.chichige_add_snippet_props
+    return pps.kmiKeysBit & 16
+def set_kmiOskey(self, value):
+    setBitToKmiKeysBit(value, 16)
+    
+def setBitToKmiKeysBit(value, bit):
+    pps = bpy.context.scene.chichige_add_snippet_props
+    pps.kmiKeysBit
+    if value and (pps.kmiKeysBit | bit) & 30 == 30 : #30 = all but Any. 2+4+8+16=30
+        pps.kmiKeysBit = 31
+    else:
+        if value:
+            pps.kmiKeysBit = ((pps.kmiKeysBit | bit) & 30)
+        else:
+            pps.kmiKeysBit = (pps.kmiKeysBit & (30 - bit))
+
+        
+#--EnumItem-------
+def getKmiMapType(self, context):
+    items = bpy.types.KeyMapItem.bl_rna.properties["map_type"].enum_items.values()
+    retVal = []
+    for item in items:
+        retVal.append((item.identifier, item.name, item.description, item.icon, item.value))
+    return retVal
+
+def getKmName(self, context):
+    kc = context.window_manager.keyconfigs.user
+    retVal = []
+    for km in kc.keymaps:
+        retVal.append((km.name, km.name, km.name))
+    return retVal
+
+def getKmiType(self, context):
+    pps = context.scene.chichige_add_snippet_props
+    items = bpy.types.KeyMapItem.bl_rna.properties["type"].enum_items.values()
+             
+    if pps.kmiMapType == "TEXTINPUT":
+        return (['TEXTINPUT', 'Text Input', '', '', -2])           
+    else:
+        retVal = []
+        if pps.kmiMapType == 'KEYBOARD':
+            for item in items:
+                if (item.value >= 97 and item.value <= 259) or (item.value >= 280 and item.value <=399):
+                    retVal.append((item.identifier, item.name, item.description, item.icon, item.value))
+            return retVal
+        elif pps.kmiMapType == 'TWEAK':
+            min, max = 20482, 20486   
+        elif pps.kmiMapType == 'MOUSE':
+            min, max = 1, 17
+        elif pps.kmiMapType == 'NDOF':
+            min, max = 400, 450
+        elif pps.kmiMapType == 'TIMER':
+            min, max = 272, 279
+        else:
+            min, max = 0, 0
+            
+        for item in items:
+            if item.value >= min and item.value <= max:
+                retVal.append((item.identifier, item.name, item.description, item.icon, item.value))
+        return retVal
+    
+def getKmiValue(self, context):
+    pps = context.scene.chichige_add_snippet_props
+    items = bpy.types.KeyMapItem.bl_rna.properties["value"].enum_items.values()
+             
+    if pps.kmiMapType in {'TIMER', 'TEXTINPUT'}:
+        return ['ANY', 'Any', '', '', -1]          
+    else:
+        retVal = []
+        if pps.kmiMapType == 'KEYBOARD':
+            for item in items:
+                if item.identifier in ['ANY', 'PRESS', 'RELEASE']:
+                    retVal.append((item.identifier, item.name, item.description, item.icon, item.value))
+        elif pps.kmiMapType == 'TWEAK':
+            for item in items:
+                if not item.identifier in ['NOTHING', 'PRESS', 'RELEASE', 'CLICK', 'DOUBLE_CLICK']:
+                    retVal.append((item.identifier, item.name, item.description, item.icon, item.value))            
+        else: # pps.kmiMapType in {'MOUSE', 'NDOF'}:
+            for item in items:
+                if item.identifier in ['ANY', 'PRESS', 'RELEASE', 'CLICK', 'DOUBLE_CLICK']:
+                    retVal.append((item.identifier, item.name, item.description, item.icon, item.value))            
+        return retVal
+    
+def getKmiKeyMod(self, context):
+    pps = context.scene.chichige_add_snippet_props
+    items = bpy.types.KeyMapItem.bl_rna.properties["type"].enum_items.values()
+       
+    retVal = [('NONE', '', '', '', 0)]
+    for item in items:
+        if (item.value >= 97 and item.value <= 259) or (item.value >= 280 and item.value <=399):
+            retVal.append((item.identifier, item.name, item.description, item.icon, item.value))
+    return retVal
+
 #-----
 class AddSnippetProps(bpy.types.PropertyGroup):
     isAddRefComment = BoolProperty(name = "#Ref",         description = "Add reference line as comment", default = False)
@@ -1026,12 +1252,31 @@ class AddSnippetProps(bpy.types.PropertyGroup):
     isAddUILayoutParams = BoolProperty(name = "Add All Parameters", description = "Includes all parameters if checked")
     uiLayoutMembers = EnumProperty(items = getUILayoutMemberItems, name = "Members of UILayout", description = "Reminder purpose")
                                   
-    isUseBookmark = BoolProperty()                             
     isBookmarkFindAll = BoolProperty(name = "Find All", description = "Search All Files for the Bookmark")                             
     bookmarks = CollectionProperty(type = BookmarkCollection)
-
-
-
+    
+    #REF
+    #---- keymapping -------
+    kmName = EnumProperty(items = getKmName, name = "Keymap Name", update = update_kmName)
+    kmSpaceType = StringProperty() #set by update_kmName() to reduce overhead
+    kmRegionType = StringProperty() #set by update_kmName()
+    kmIsModal = BoolProperty() #set by update_kmName()
+    
+    #kmiIdName = StringProperty()
+    #kmiPropVal =  StringProperty()
+    kmiMapType =  EnumProperty(items = getKmiMapType)
+    kmiType = EnumProperty(items = getKmiType, name = "KeymapItem Type")
+    kmiValue = EnumProperty(items = getKmiValue, name = "KeymapItem Value")
+    kmiKeyMod = EnumProperty(items = getKmiKeyMod)
+    
+    isKmiAny =   BoolProperty(name = "Any",   set = set_kmiAny,   get = get_kmiAny) 
+    isKmiShift = BoolProperty(name = "Shift", set = set_kmiShift, get = get_kmiShift)
+    isKmiCtrl =  BoolProperty(name = "Ctrl",  set = set_kmiCtrl,  get = get_kmiCtrl)
+    isKmiAlt =   BoolProperty(name = "Alt",   set = set_kmiAlt,   get = get_kmiAlt)
+    isKmiOskey = BoolProperty(name = "Cmd",   set = set_kmiOskey, get = get_kmiOskey)
+    kmiKeysBit = IntProperty() #Any : 1, Shift : 2, Ctrl : 4, Alt : 8, Oskey : 16
+    
+    
 ####################################################################################        
 
 def menu_func(self, context):
@@ -1046,8 +1291,9 @@ def register():
     bpy.utils.register_class(AddonTemplateGeneratorOp)
     bpy.utils.register_class(AddSnippetOp_Props)
     bpy.utils.register_class(AddSnippetOp_Samples)
-    bpy.utils.register_class(BookmarkOp)
+    bpy.utils.register_class(ChichigeBookmarkOp)
     bpy.utils.register_class(AddSnippetPanel)
+    bpy.utils.register_class(ChichigeBookmarkPanel)
     bpy.types.TEXT_MT_templates.append(menu_func)
 
 def unregister():
@@ -1058,8 +1304,9 @@ def unregister():
     bpy.utils.unregister_class(AddonTemplateGeneratorOp)
     bpy.utils.unregister_class(AddSnippetOp_Props)
     bpy.utils.unregister_class(AddSnippetOp_Samples)
-    bpy.utils.unregister_class(BookmarkOp)
+    bpy.utils.unregister_class(ChichigeBookmarkOp)
     bpy.utils.unregister_class(AddSnippetPanel)
+    bpy.utils.unregister_class(ChichigeBookmarkPanel)
     bpy.types.TEXT_MT_templates.remove(menu_func)
     
 if __name__ == "__main__":
