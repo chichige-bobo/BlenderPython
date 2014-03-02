@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Addon Template Generator",
     "author": "chichige-bobo",
-    "version": (0, 9, 2),
+    "version": (0, 9, 5),
     "blender": (2, 69, 0),
     "location": "TextEditor > Templates > AddonTemplateGenerator, TextEditor > PropertiesBar > AddSnippet/Bookmarks",
     "description": "Generate empty addon template. Add snippet of propertes and samples",
@@ -9,8 +9,6 @@ bl_info = {
     "wiki_url": "",
     "tracker_url": "",
     "category": "Development"}
-
-#TODO : snippet of keymap for menu
 
 # LET USERS TO MANIPULATE AFTER GENERATED, NOT COMPLETE AT DIALOG
 import bpy
@@ -59,7 +57,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
     
     isUseOpProps = BoolProperty(name='Add Operator Properties', description = "Add a set of properties for this operator", default = False )
 
-    isUsePanel = BoolProperty(name='Add Panel Class', description = "Whether use Panel class or not.", default = True )
+    isUsePanel = BoolProperty(name='Add Panel Class', description = "Whether use Panel class.", default = True)
     p_panelOptions = EnumProperty(items = [('DEFAULT_CLOSED', 'DefaultClosed', 'Defines if the panel has to be open or collapsed at the time of its creation'), 
                                            ('HIDE_HEADER', 'HideHeader', 'If set to False, the panel shows a header, which contains a clickable arrow to collapse the panel and the label')],
                                   name="PanelOptions",
@@ -71,10 +69,12 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
                                       name="SpaceRegionType", 
                                       description="Panel's bl_space_type, bl_region_type and bl_context")                                
 
-    isUseGPLNotice =  BoolProperty(name ='Add GPL Notification', default = False)
-    isUseSceneProps = BoolProperty(name ='Add Scene Properties', default = False )
+    isUseMenu = BoolProperty(name='Add Menu Class', description = "Whether use Menu class.", default = False)
+
+    isUseGPLNotice =  BoolProperty(name = 'Add GPL Notification', default = False)
+    isUseSceneProps = BoolProperty(name = 'Add Scene Properties', default = False )
     isUseMenuFunc =   BoolProperty(name = 'Add Menu Function', default = False)
-    isUseKeymap =     BoolProperty(name ='Add Keymapping', default = False )
+    isUseKeymap =     BoolProperty(name = 'Add Keymapping', default = False )
     
     #=AddonTempGen execute=======================================
     def execute(self, context):
@@ -106,13 +106,20 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         temp = "" if not self.isUseOpProps else txt_props
         txt += txt_operator % (txt_className, '"ToolTip of ' + txt_className + '"', txt_blIdname, txt_blLabel, txt_blOptions, temp)
         
+        #---
+        if self.p_panelSpaceRegion.startswith("PROP"):
+            ctgrConv = self.p_panelSpaceRegion.split("-")[2].replace("_", "").upper()
+        else:
+            ctgrConv = self.p_panelSpaceRegion.split("-")[0].replace("_", "")
+        
+        
         #-----panel
         txt_className_p = txt_name.replace(" ", "") + "Panel"
         if self.p_panelSpaceRegion.startswith("PROP"):
-            temp = self.p_panelSpaceRegion.split("-")[2].replace("_", "").upper()
+            ctgrConv = self.p_panelSpaceRegion.split("-")[2].replace("_", "").upper()
         else:
-            temp = self.p_panelSpaceRegion.split("-")[0].replace("_", "")
-        txt_blIdname_p = temp + '_PT_' + txt_name.replace(" ", "_").lower()
+            ctgrConv = self.p_panelSpaceRegion.split("-")[0].replace("_", "")
+        txt_blIdname_p = ctgrConv + '_PT_' + txt_name.replace(" ", "_").lower()
         txt_blLabel_p = txt_name + " Panel"
         
         txt_blOptions_p = ""
@@ -130,6 +137,13 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         txt += "" if not self.isUsePanel else txt_panel % (txt_className_p, '"ToolTip of ' + txt_className_p + '"', 
                                                             txt_blIdname_p, txt_blLabel_p, txt_blOptions_p, 
                                                             txt_space_p + txt_region_p + txt_context_p, txt_className)
+        
+        #-----menu
+        txt_className_m = txt_name.replace(" ", "") + "Menu"
+        txt_blIdname_m = ctgrConv + '_MT_' + txt_name.replace(" ", "_").lower()
+        txt_blLabel_m = txt_name + " Menu"
+        txt += "" if not self.isUseMenu else txt_menu % (txt_className_m, txt_blIdname_m, txt_blLabel_m, txt_className)
+        
         
         #-----
         if self.isUseSceneProps:
@@ -151,16 +165,22 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
             temp2 += "    #del bpy.types.Scene.%s_props\n\n" % txt_blIdname.replace(".", "_")
             temp2 += "    "
             
+        #CURRENT 
         temp1 += "bpy.utils.register_class(%s)" % txt_className
         temp1 += "" if not self.isUsePanel else "\n    bpy.utils.register_class(%s)" % txt_className_p
+        temp1 += "" if not self.isUseMenu else "\n    bpy.utils.register_class(%s)" % txt_className_m
         temp1 += "" if not self.isUseMenuFunc else "\n    bpy.types.VIEW3D_MT_object.append(menu_func)"
         temp2 += "bpy.utils.unregister_class(%s)" % txt_className
         temp2 += "" if not self.isUsePanel else "\n    bpy.utils.unregister_class(%s)" % txt_className_p
+        temp2 += "" if not self.isUseMenu else "\n    bpy.utils.unregister_class(%s)" % txt_className_m
         temp2 += "" if not self.isUseMenuFunc else "\n    bpy.types.VIEW3D_MT_object.remove(menu_func)"
         if not self.isUseKeymap:
             txt += txt_reg % (temp1, temp2)
         else:
-            txt += txt_reg_keymap % (temp1, txt_className, temp2)
+            if self.isUseMenu:
+                txt += txt_reg_keymap % (temp1, '"wm.call_menu"', "kmi.properties.name = %s.bl_idname" % txt_className_m, temp2)
+            else:
+                txt += txt_reg_keymap % (temp1, txt_className + ".bl_idname", "#kmi.properties.prop1 = 'some'", temp2)
         
         #-----
         textObj = bpy.data.texts.new('z_Hello_World')
@@ -193,7 +213,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         col_L = split.column()
         col_L.alignment = 'RIGHT'
         col_L.label('bl_options')
-        col_L.label('Use Operator Props')
+        col_L.label('Use Op Props')
         col_R = split.column()
         col_R.row().prop(self, 'p_opOptions')
         col_R.prop(self, 'isUseOpProps')
@@ -203,7 +223,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         split = layout.split(0.2)
         col_L = split.column()
         col_L.alignment = 'RIGHT'
-        col_L.label('UsePanel')
+        col_L.label('Use Panel')
         col_L.label('Place')
         col_L.label('')
         col_L.label('bl_options') 
@@ -213,6 +233,14 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         col_R.label('(Full list is in props panel. Replace with after completion.)')
         row = col_R.split(0.6).row().prop(self, 'p_panelOptions')
 
+        layout.separator()
+        layout.label('Menu ' + ('-' * 300))
+        split = layout.split(0.2)
+        split.alignment = 'RIGHT'
+        split.label('Use Menu')
+        #split = split.row()
+        split.prop(self, 'isUseMenu')
+    
         layout.separator()
         layout.label('Misc ' + ('-' * 300))
         split = layout.split(0.2)
@@ -596,24 +624,36 @@ class AddSnippetOp_Samples(bpy.types.Operator):
         else:
             text += "%s, %s, %s, %s, mod: %s\n" % (pps.kmiMapType, pps.kmiType, pps.kmiValue, keys, pps.kmiKeyMod)
         text += "====================================================\n\n"
+
+        kc = context.window_manager.keyconfigs.user
+        for km in kc.keymaps:
+            if km.name == pps.kmName:
+                break
+        text += self.getKeymapConflicts_km(context, km)
+        
+        for km in kc.keymaps:
+            if km.name != pps.kmName:
+                text+= self.getKeymapConflicts_km(context, km)
+                
+        print(text)
+        
+    def getKeymapConflicts_km(self, context, km):
+        pps = context.scene.chichige_add_snippet_props
+        text = "\n"
         
         matchText = ""
         similarText = ""
         matchTitle =   " < MATCH > : "
         similarTitle = "  Similar  : "
         
-        kc = context.window_manager.keyconfigs.user
-        for km in kc.keymaps:
-            if km.name == pps.kmName:
-                break
-            
+        text += "-- %s %s\n" % (km.name, "-" * 50 )
         for kmi in km.keymap_items:
             if kmi.map_type == pps.kmiMapType and (kmi.map_type == 'TEXTINPUT' or (kmi.map_type != 'TEXTINPUT' and kmi.type == pps.kmiType)):
                 
-                tempText = "%s (%s%s" % ((kmi.propvalue if km.is_modal else kmi.name), kmi.map_type, (", " + kmi.type if kmi.map_type != 'TEXTINPUT' else ""))
+                tempText = kmi.propvalue if km.is_modal else kmi.name
                 
                 if kmi.map_type in {'TEXTINPUT', 'TIMER'}:
-                    matchText += matchTitle + tempText + ")\n"
+                    matchText += matchTitle + tempText + "\n"
                 else:
                     keys = []
                     keys.append('Any') if kmi.any else None
@@ -621,17 +661,28 @@ class AddSnippetOp_Samples(bpy.types.Operator):
                     keys.append('Ctrl') if kmi.ctrl else None
                     keys.append('Alt') if kmi.alt else None
                     keys.append('Oskey') if kmi.oskey else None
-                    tempText += ", %s, %s, mod: %s)\n" % (kmi.value, keys, kmi.key_modifier)
+                    tempText += " (%s, %s, mod: %s)\n" % (kmi.value, str(keys).replace("'", ""), kmi.key_modifier)
+                    if kmi.name == "Call Menu":
+                        tempText += (" " * 23) + ("(menu: %s)\n" % kmi.properties['name'])
+
                     
                     keysBit = (2 if kmi.shift else 0) | (4 if kmi.ctrl else 0) | (8 if kmi.alt else 0) | (16 if kmi.oskey else 0)                    
                     if kmi.value == pps.kmiValue and keysBit == (pps.kmiKeysBit & 30) and kmi.key_modifier == pps.kmiKeyMod:
                         matchText += matchTitle + tempText
                     else:                    
                         similarText += similarTitle + tempText
-                        
-        text += matchText if matchText else matchTitle + " (Not found)\n"
-        text += similarText if similarText else similarTitle + " (Not found)\n" 
-        print(text)
+        
+        if km.name == pps.kmName:
+            text += matchText if matchText else matchTitle + " (Not found)\n"
+            text += similarText if similarText else similarTitle + " (Not found)\n"
+        else:
+            if not matchText and not similarText:
+                text = ""
+            else:
+                text += matchText if matchText else ""
+                text += similarText if similarText else ""
+        
+        return text
         
 
 #################################################################################### 
@@ -895,6 +946,7 @@ class ChichigeBookmarkPanel(bpy.types.Panel):
     """Panel for Bookmarks"""
     bl_idname = "TEXTEDITOR_PT_chichige_bookmark_panel"
     bl_label = "Bookmarks"
+    bl_options =  {'DEFAULT_CLOSED'}
     
     bl_space_type = 'TEXT_EDITOR'
     bl_region_type = 'UI'
@@ -1255,7 +1307,6 @@ class AddSnippetProps(bpy.types.PropertyGroup):
     isBookmarkFindAll = BoolProperty(name = "Find All", description = "Search All Files for the Bookmark")                             
     bookmarks = CollectionProperty(type = BookmarkCollection)
     
-    #REF
     #---- keymapping -------
     kmName = EnumProperty(items = getKmName, name = "Keymap Name", update = update_kmName)
     kmSpaceType = StringProperty() #set by update_kmName() to reduce overhead
@@ -1391,6 +1442,7 @@ class %s(bpy.types.Operator):
     #def draw(self, context, event):
 
 """
+
 #txt_panel % (ClassName, "ToolTip", bl_idname, bl_label, SpaceRegion, bl_context, OperatorClassName)
 txt_panel = """\
 class %s(bpy.types.Panel):
@@ -1406,6 +1458,21 @@ class %s(bpy.types.Panel):
 
 """
 
+#txt_menu % (ClassName, bl_idname, bl_label, OperatorClassName)
+txt_menu = """\
+class %s(bpy.types.Menu):
+    bl_idname = "%s"
+    bl_label = "%s"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator(%s.bl_idname)
+        layout.separator()
+        layout.menu("VIEW3D_MT_transform")
+        layout.operator_menu_enum("object.select_by_type", "type", text="Select All by Type...")
+
+"""
+
 txt_reg = """\
 def register():
     %s
@@ -1417,6 +1484,7 @@ if __name__ == "__main__":
     register()
 """
 
+#REF
 txt_reg_keymap = """\
 # store keymaps here to access after registration
 addon_keymaps = []
@@ -1427,8 +1495,8 @@ def register():
     # handle the keymap
     wm = bpy.context.window_manager
     km = wm.keyconfigs.addon.keymaps.new(name='Object Mode', space_type='EMPTY')
-    kmi = km.keymap_items.new(%s.bl_idname, 'SPACE', 'PRESS', ctrl=True, shift=True)
-    #kmi.properties.prop1 = 'some'
+    kmi = km.keymap_items.new(%s, 'SPACE', 'PRESS', ctrl=True, shift=True)
+    %s
     addon_keymaps.append((km, kmi))
 
 def unregister():
