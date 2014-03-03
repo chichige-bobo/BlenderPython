@@ -1,13 +1,25 @@
 #bl_info = {
 #    "name": "KeymapResearch",
 #    "author": "chichige-bobo",
-#    "version": (1, 0),
+#    "version": (1, 1),
 #    "blender": (2, 69, 0),
 #    "location": "TextEditor > ToolPanel ",
 #    "description": "Research keymaps for better understanding",
 #    "category": "Developer"}
 
 import bpy
+from bpy.props import *
+
+class KeymapConflictCheckOperator(bpy.types.Operator):
+    """Check whether key combination conflicts with existed"""
+    bl_idname = "addongen.keymap_confilict_check_operator"
+    bl_label = "Keymap Conflict Check Operator"
+    bl_options = {'REGISTER'}
+    
+    type = bpy.props.StringProperty()
+    
+    def execute(self, context):
+        pass
 
 class KeymapResearchOperator(bpy.types.Operator):
     """Research keyconfigs.keymaps.keymap_items then write report to as text"""
@@ -39,7 +51,12 @@ class KeymapResearchOperator(bpy.types.Operator):
             text += self.getKeymaps_unordinary(kcs)
         elif self.type == "KM_KMI_UNORDINARY":
             text += self.getKeymaps_KeymapItems_unordinary(kcs)
-        
+            
+        elif self.type == "ENUM_ITEMS":
+            text += self.getEnumItems()
+        elif self.type == "CUSTOM_FUNC":
+            text += self.getCustomFiltering(kcs)
+            
         textObjName = pps.text_name  # this prop is 'SKIP_SAVE'. but not worked as i expected
         if not textObjName or not textObjName in bpy.data.texts:
             textObj = bpy.data.texts.new('KeymapResearch_Report')
@@ -49,13 +66,53 @@ class KeymapResearchOperator(bpy.types.Operator):
         
         textObj.from_string(text)
         
-        context.space_data.text = textObj
+        #context.space_data.text = textObj ################# release comment to be active the report automatically 
         self.report({'INFO'}, "New report was written to %s" % textObj.name)
+        print('If you are looking for the report, select "%s" in TextEditor' % textObj.name)
         return {'FINISHED'}
     
     #------------        
     def getBasicStatistics(self, kcs):
-        text = self.sep
+        text = """\
+# Summary according to my observationas. (NOT OFFICIAL)
+#
+# keymap.space_type : almost 'EMPTY' but every other space_type exists.
+# keymap-region_type is all 'WINDOW'. no exception found.
+# keymap.is_modal : almost non modal. few are modal. e.g. GestureBorder, View3DFlyModal, KnifeToolModalMap
+# keymap.is_user_modified : always False
+# 
+# keymap_item.propvalue        : always "NONE" except modal keymap
+# When keymap is modal, keymap_item.name == "" and .idname == "" and .properties == "NONE".
+# keymap_item.is_user_defined  : always False 
+# keymap_item.is_user_modified : always False 
+# keymap_item.key_modifier     : always "NONE" but GreasePencil has 'D'
+# keymap_item.value            : 'ANY' when map_type is 'TIMER' or 'TEXTINPUT'
+# when keymap is modal and keymap_item.map_type is 'TEXTINPUT'/'TIMER', .value is always 'NOTHING' and .any is always True
+# 
+# Hierarchy is keyconfigs.keyconfig.keymaps.keymap.keymap_items.keymap_item
+#
+###################################################
+# Experiment:
+# When run following lines, which keyconfig reacts? 
+# km = wm.keyconfigs.XXXXX.keymaps.new(name='Grease Pencil', space_type='EMPTY')
+# kmi = km.keymap_items.new("addongen.hello_world_operator", 'SPACE', 'PRESS', shift=True)
+#
+# Result:
+# If added to Blender,         BlenderUser reflected it
+# If added to BlenderAddon,    BlenderUser reflected it
+# If added to BlenderUser,     no other reflected it
+#
+# When active is 3Dsmax,
+# If added to BlenderAddon,    BlenderUser reflected it
+# If added to active (3Dsmax), BlenderUser reflected it
+#
+# Conclusion:
+# To search the conflict while keyconfigs.addon is used to register new key,
+# the search should be done against keyconfigs.user 
+# (If the Addon goes public, only Blender's and Addon's should be concerned.)
+# (If someone using 3Dsmax preset, the user should change the key, not by the author.)
+"""
+        text += self.sep
         text += "keyconfigs\n"
         for kc in kcs:
             text += '    %s has %d keymaps\n' % (kc.name, len(kc.keymaps))
@@ -65,6 +122,18 @@ class KeymapResearchOperator(bpy.types.Operator):
         text += "keyconfigs.default.name = %s\n" % kcs.default.name 
         text += "keyconfigs.addon.name =   %s\n" % kcs.addon.name 
         text += "keyconfigs.user.name =    %s\n" % kcs.user.name 
+        
+        text += self.sep
+        text += "#Sum of map_type of all keymap_items of all keymaps\n"
+        for kc in kcs:
+            dic = {'KEYBOARD' : 0, 'TWEAK' : 0, 'MOUSE' : 0, 'NDOF' : 0, 'TEXTINPUT': 0, 'TIMER' : 0}
+            for km in kc.keymaps:
+                for kmi in km.keymap_items:
+                    dic[kmi.map_type] += 1
+            text += '%s\n' % kc.name
+            for k,v in dic.items():
+                text += '    %s %s: %d\n' % (k, " " * (9 - len(k)), v)
+                
         
         text += self.sep
         text += "# keyconfig\n"
@@ -115,7 +184,7 @@ class KeymapResearchOperator(bpy.types.Operator):
         return text    
         
     def getKeymapItems_detail(self, kc, km):
-        text = "" 
+        text = "# This text is automatically override everytime run the command.\n\n" 
         text += self.sep
         text += kc.name + "\n"
         text += '    %s \n' % km.name 
@@ -201,7 +270,7 @@ class KeymapResearchOperator(bpy.types.Operator):
         kc_user = kcs.user
         #if all kc_def.keymaps exists in kc_user 
         text += "# ------\n"
-        text += '# Check if all %s.keymaps exists in %s.keymaps \n' % (kc_def.name, kc_user.name)
+        text += '# Check if all %s.keymaps exists in %s.keymaps (listed below are those exist only in keyconfig "%s")\n' % (kc_def.name, kc_user.name, kc_def.name)
         text += "%s\n" % kc_def.name
         subText = ""
         for km_d in kc_def.keymaps:
@@ -211,28 +280,28 @@ class KeymapResearchOperator(bpy.types.Operator):
                    km_d.space_type == km_u.space_type and km_d.region_type == km_u.region_type:
                     
                     isKMExist = True
-                    if len(km_d.keymap_items) > len(km_u.keymap_items):
-                        subSubText = ""            
-                        for kmi_d in km_d.keymap_items:
-                            isKMIExist = False
-                            for kmi_u in km_u.keymap_items:
-                                if not km_d.is_modal and kmi_d.name == kmi_u.name and kmi_d.id == kmi_u.id:
-                                    isKMIExist = True
-                                    break
-                                elif km_d.is_modal and kmi_d.propvalue == kmi_u.propvalue and kmi_d.id == kmi_u.id:
-                                    isKMIExist = True
-                                    break
-                                
-                            if not isKMIExist:
-                                subSubText += '        %s\n' % (kmi_d.name if kmi_d.name else "(.name is empty)")
-                                subSubText += '            id =  %s\n' % kmi_d.id
-                                subSubText += "" if not km_d.is_modal else '            propvalue =  %s\n' % kmi_d.propvalue
-                        
+                    subSubText = ""            
+                    for kmi_d in km_d.keymap_items:
+                        isKMIExist = False
+                        for kmi_u in km_u.keymap_items:
+                            if not km_d.is_modal and kmi_d.name == kmi_u.name and kmi_d.id == kmi_u.id:
+                                isKMIExist = True
+                                break
+                            elif km_d.is_modal and kmi_d.propvalue == kmi_u.propvalue and kmi_d.id == kmi_u.id:
+                                isKMIExist = True
+                                break
+                            
+                        if not isKMIExist:
+                            subSubText += '        %s\n' % (kmi_d.name if kmi_d.name else "(.name is empty)")
+                            subSubText += '            id =  %s\n' % kmi_d.id
+                            subSubText += "" if not km_d.is_modal else '            propvalue =  %s\n' % kmi_d.propvalue
+                    
+                    if subSubText:
                         subText += '    %s\n' % km_d.name
                         subText += subSubText
                         
             if not isKMExist:
-                subText += '    %s (%d)\n' % (km_d.name, len(km_d.keymap_items))
+                subText += '    %s (%d) # keymap was not matched.\n' % (km_d.name, len(km_d.keymap_items))
                 subText += '        space_type =  %s\n' % km_d.space_type
                 subText += '        region_type = %s\n' % km_d.region_type
                 subText += '        is_user_modified =    %s\n' % km_d.is_user_modified
@@ -251,28 +320,28 @@ class KeymapResearchOperator(bpy.types.Operator):
                    km_u.space_type == km_d.space_type and km_u.region_type == km_d.region_type:
                     
                     isKMExist = True
-                    if len(km_u.keymap_items) > len(km_d.keymap_items):
-                        subSubText = ""            
-                        for kmi_u in km_u.keymap_items:
-                            isKMIExist = False
-                            for kmi_d in km_d.keymap_items:
-                                if not km_u.is_modal and kmi_u.name == kmi_d.name and kmi_u.id == kmi_d.id:
-                                    isKMIExist = True
-                                    break
-                                elif km_u.is_modal and kmi_u.propvalue == kmi_d.propvalue and kmi_u.id == kmi_d.id:
-                                    isKMIExist = True
-                                    break
-                                
-                            if not isKMIExist:
-                                subSubText += '        %s\n' % (kmi_u.name if kmi_u.name else "(.name is empty)")
-                                subSubText += '            id =  %s\n' % kmi_u.id
-                                subSubText += "" if not km_u.is_modal else '            propvalue =  %s\n' % kmi_u.propvalue
-                        
+                    subSubText = ""            
+                    for kmi_u in km_u.keymap_items:
+                        isKMIExist = False
+                        for kmi_d in km_d.keymap_items:
+                            if not km_u.is_modal and kmi_u.name == kmi_d.name and kmi_u.id == kmi_d.id:
+                                isKMIExist = True
+                                break
+                            elif km_u.is_modal and kmi_u.propvalue == kmi_d.propvalue and kmi_u.id == kmi_d.id:
+                                isKMIExist = True
+                                break
+                            
+                        if not isKMIExist:
+                            subSubText += '        %s\n' % (kmi_u.name if kmi_u.name else "(.name is empty)")
+                            subSubText += '            id =  %s\n' % kmi_u.id
+                            subSubText += "" if not km_u.is_modal else '            propvalue =  %s\n' % kmi_u.propvalue
+                    
+                    if subSubText:
                         subText += '    %s\n' % km_u.name
                         subText += subSubText
-                        
+                            
             if not isKMExist:
-                subText += '    %s (%d)\n' % (km_u.name, len(km_u.keymap_items))
+                subText += '    %s (%d) # keymap was not matched.\n' % (km_u.name, len(km_u.keymap_items))
                 subText += '        space_type =  %s\n' % km_u.space_type
                 subText += '        region_type = %s\n' % km_u.region_type
                 subText += '        is_user_modified =    %s\n' % km_u.is_user_modified
@@ -282,7 +351,6 @@ class KeymapResearchOperator(bpy.types.Operator):
                 
         return text
 
-    #CURRENT
     #--------------
     def getKeymaps_KeymapItems_unordinary(self, kcs):
         text = """\
@@ -292,7 +360,7 @@ class KeymapResearchOperator(bpy.types.Operator):
 # propvalue = CONFIRM                              # "NONE" when Not modal / has value when modal
 # is_user_defined = False                          # always False 
 # is_user_modified = False                         # always False
-# key_modifier = NONE                              # always False
+# key_modifier = NONE                              # always "NONE" but GreasePencil
 # map_type = MOUSE 
 # type = MIDDLEMOUSE 
 # value = RELEASE
@@ -391,12 +459,88 @@ class KeymapResearchOperator(bpy.types.Operator):
                     kmText += subText
             text += "    (no exception found)\n" if not kmText else kmText
             text += "\n"
-
+        
+        text += self.sep
+        text += '# Validate any is always False when keymap is not modal and always True when keymap is modal.\n'
+        for kc in kcs:
+            text += kc.name + "\n"
+            kmText = ""
+            for km in kc.keymaps:
+                subText = ""
+                for kmi in km.keymap_items:
+                    if (not km.is_modal and kmi.any) or (km.is_modal and not kmi.any):
+                        subText += "            %s \n" % (kmi.name if kmi.name != "" else "(.name is empty)")
+                        subText += "                propvalue = %s \n" % kmi.propvalue
+                        subText += "                any = %s \n" % kmi.any
+                if subText:
+                    kmText += '    %s \n' % km.name 
+                    kmText += '        modal, usermod : %s, %s \n' % (km.is_modal, km.is_user_modified) 
+                    kmText += '        %s, %s \n' % (km.region_type, km.space_type)
+                    kmText += subText
+            text += "    (no exception found)\n" if not kmText else kmText
+            text += "\n"
+            
+        return text
+   
+    def getEnumItems(self):
+        text = ""    
+        text += self.sep
+        text += self.listEnumItems(bpy.types.KeyMap, "space_type", "KeyMap.space_type")
+        text += self.sep
+        text += self.listEnumItems(bpy.types.KeyMap, "region_type", "KeyMap.region_type")
+        text += self.sep
+        text += self.listEnumItems(bpy.types.KeyMapItem, "map_type", "KeyMapItem.map_type")
+        text += self.sep
+        text += self.listEnumItems(bpy.types.KeyMapItem, "type", "KeyMapItem.type")
+        text += self.sep
+        text += self.listEnumItems(bpy.types.KeyMapItem, "value", "KeyMapItem.value")
+        text += self.sep
+        text += self.listEnumItems(bpy.types.KeyMapItem, "key_modifier", "KeyMapItem.key_modifier")
+        text += self.sep
+        text += self.listEnumItems(bpy.types.KeyMapItem, "propvalue", "KeyMapItem.propvalue")
         return text
     
-   
-    
-    
+    def listEnumItems(self, cls, propName, title):
+        items = cls.bl_rna.properties[propName].enum_items.values()
+        text = title + "\n"
+        for item in items:
+            text += "    %s, %s, %s, %s, %s\n" % (item.identifier, item.name, item.description, item.icon, item.value)
+        return text   
+
+    #CURRENT    
+    def getCustomFiltering(self, kcs): 
+        text = ""    
+        text += self.sep
+        text += '# Just custom filtering\n'
+        for kc in kcs:
+            text += kc.name + "\n"
+            kmText = ""
+            for km in kc.keymaps:
+                subText = ""
+                for kmi in km.keymap_items:
+                    if km.is_modal and kmi.any and kmi.map_type in {'TEXTINPUT', 'TIMER'}:
+                        subText += "            %s \n" % (kmi.name if kmi.name != "" else "(.name is empty)")
+                        subText += "                map_type = %s \n" % kmi.map_type
+                        subText += "                type = %s \n" % kmi.type
+                        subText += "                value = %s \n" % kmi.value
+                        subText += "                properties = %s \n" % kmi.properties.__class__#.properties['name']
+                        subText += "                propvalue = %s \n" % kmi.propvalue
+                        keys = ['any', 'ctrl', 'shift', 'alt', 'oskey']
+                        keysTrue = []
+                        for k in keys:
+                            if getattr(kmi, k):
+                                keysTrue.append(k)                       
+                        subText += "                keys : %s\n" % keysTrue 
+                if subText:
+                    kmText += '    %s \n' % km.name 
+                    kmText += '        modal, usermod : %s, %s \n' % (km.is_modal, km.is_user_modified) 
+                    kmText += '        %s, %s \n' % (km.region_type, km.space_type)
+                    kmText += subText
+            text += "    (no matches found)\n" if not kmText else kmText
+            text += "\n"
+        return text
+ 
+        
 #########################################################
 class KeymapResearchPanel(bpy.types.Panel):
     """Panel for Keymap Research Operator"""
@@ -405,7 +549,8 @@ class KeymapResearchPanel(bpy.types.Panel):
 
     bl_space_type = 'TEXT_EDITOR'
     bl_region_type = 'UI'
-        
+    
+            
     def draw(self, context):
         pps = context.scene.chichige_keymap_research_props
         
@@ -425,9 +570,16 @@ class KeymapResearchPanel(bpy.types.Panel):
         layout.label("-" * 60)
         layout.operator(KeymapResearchOperator.bl_idname, text = "Keymaps - Unordinary").type = "KM_UNORDINARY"
         layout.operator(KeymapResearchOperator.bl_idname, text = "Keymaps KeymapItems - Unordinary").type = "KM_KMI_UNORDINARY"
+        layout.label("-" * 60)
+        layout.operator(KeymapResearchOperator.bl_idname, text = "Enum Items").type = "ENUM_ITEMS"
+        layout.operator(KeymapResearchOperator.bl_idname, text = "Custom Filtering").type = "CUSTOM_FUNC"
+        layout.label("-" * 60)
         
+                
 
 ##########################################################
+
+#--EnumItem-------
 def getItems_keyconfig(self, context):
     kcs = context.window_manager.keyconfigs
     retVal = []
@@ -445,11 +597,11 @@ def getItems_keymap(self, context):
         retVal.append((km.name, km.name, km.name))
     return retVal
 
+    
 class MySceneProps(bpy.types.PropertyGroup):
     text_name = bpy.props.StringProperty(options = {'SKIP_SAVE'})
     keyconfig = bpy.props.EnumProperty(items = getItems_keyconfig)
     keymap= bpy.props.EnumProperty(items = getItems_keymap)
-    
 
 ###########################################################
 def register():
