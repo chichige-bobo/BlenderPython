@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Addon Template Generator",
     "author": "chichige-bobo",
-    "version": (0, 9, 6),
+    "version": (0, 9, 7),
     "blender": (2, 69, 0),
     "location": "TextEditor > Templates > AddonTemplateGenerator, TextEditor > PropertiesBar > AddSnippet/Bookmarks",
     "description": "Generate empty addon template. Add snippet of propertes and samples",
@@ -165,7 +165,6 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
             temp2 += "    #del bpy.types.Scene.%s_props\n\n" % txt_blIdname.replace(".", "_")
             temp2 += "    "
             
-        #CURRENT 
         temp1 += "bpy.utils.register_class(%s)" % txt_className
         temp1 += "" if not self.isUsePanel else "\n    bpy.utils.register_class(%s)" % txt_className_p
         temp1 += "" if not self.isUseMenu else "\n    bpy.utils.register_class(%s)" % txt_className_m
@@ -397,8 +396,9 @@ class AddSnippetOp_Samples(bpy.types.Operator):
     bl_label = "Add Snippet Operator - Samples"
     bl_options = {'INTERNAL', 'UNDO'}
     
-    type = EnumProperty(items = [('CodeSamples', 'CodeSamples', 'Insert/Copy selected sample'), 
-                                 ('PanelPlace', 'PanelPlace', 'Insert/Copy selected place'),
+    type = EnumProperty(items = [('PanelPlace', 'PanelPlace', 'Insert/Copy selected place'),
+                                 ('AddonParts', 'AddonParts', 'Insert/Copy selected addon parts'), 
+                                 ('HintSnippets', 'HintSnippets', 'Insert/Copy selected hint'),
                                  ('UILayoutMembers', 'UILayoutMembers', 'Insert/Copy selected member'),
                                  ('INEFFECTIVE', 'INEFFECTIVE', 'Separator selected. Do nothing.'),
                                  ('Keymap', 'Keymap', 'Insert/Copy keymap combination.'),
@@ -427,14 +427,17 @@ class AddSnippetOp_Samples(bpy.types.Operator):
                         'label()':              'label(text="", text_ctxt="", translate=True, icon=%s, icon_value=0)' % "'NONE'", 
                         'menu()':               'menu(menu, text = "", text_ctxt = "", translate = True, icon = %s)' % "'NONE'", 
                         'separator()':          'separator()'}
-            
+    
+    #CURRENT_Operator        
     def execute(self, context):
         pps = context.scene.chichige_add_snippet_props
         
-        if self.type == 'CodeSamples':
-            txt = self.getCodeSamples(context)
-        elif self.type == 'PanelPlace':
+        if self.type == 'PanelPlace':
             txt = self.getPanelPlace(context)
+        elif self.type == 'AddonParts':
+            txt = self.getAddonParts(context)
+        elif self.type == 'HintSnippets':
+            txt = globals()["txt_hint_%s" % pps.hintSnippets] #in my experiment, global() doesn't contain another addon's
         elif self.type == 'UILayoutMembers':
             txt = self.getUILayoutMembers(context)
         elif self.type == 'INEFFECTIVE':
@@ -457,7 +460,62 @@ class AddSnippetOp_Samples(bpy.types.Operator):
             
         return {'FINISHED'}
       
-    def getCodeSamples(self, context):
+
+    #---- 
+    def getPanelPlace(self, context):
+        pps = context.scene.chichige_add_snippet_props
+                
+        # below is True only when called when "CodeSamples > PanelClass"
+        # because 'SEPARATOR' is blocked in PanelPlace section by ".enabled = False".
+        if pps.panelSpace.startswith('SEPA'):
+            return "bl_space_type = 'VIEW_3D'\n    bl_region_type = 'TOOLS'\n"
+        
+        txt = ""
+        txt_space = "bl_space_type = '%s'" % pps.panelSpace
+        if pps.panelSpace == 'VIEW_3D' or pps.panelSpace == 'CLIP_EDITOR':
+            txt_region = pps.panelRegion_view3d_clip
+        elif pps.panelSpace == 'PROPERTIES' or pps.panelSpace == 'USER_PREFERENCES':
+            txt_region = 'WINDOW'
+        elif pps.panelSpace == 'FILE_BROWSER':
+            txt_region = 'CHANNELS'
+        elif pps.panelSpace == 'IMAGE_EDITOR':
+            txt_region = pps.panelRegion_image
+        elif pps.panelSpace == 'NODE_EDITOR':
+            txt_region = pps.panelRegion_node
+        else:
+            txt_region = 'UI'
+        txt_region = "bl_region_type = '%s'" % txt_region
+        
+        txt_context = ""
+        txt_category = ""
+        if pps.panelSpace == 'VIEW_3D':
+            if pps.panelContext_view3d != 'NO':
+                txt_context = "bl_context = '%s'" % pps.panelContext_view3d
+            
+            if pps.panelRegion_view3d_clip == 'TOOLS':
+                if pps.panelContext_view3d == 'objectmode':
+                    txt_category = pps.panelCategory_objectmode
+                elif pps.panelContext_view3d == 'mesh_edit':
+                    txt_category = pps.panelCategory_editmode
+                else:
+                    txt_category = pps.panelCategory_others
+                
+                if txt_category == 'NO':
+                    txt_category = "" 
+                else:
+                    txt_category = "bl_category = '%s'" % txt_category                  
+        
+        elif pps.panelSpace == 'PROPERTIES':
+            txt_context = "bl_context = '%s'" % pps.panelContext_properties
+        
+        txt += "    %s\n    %s\n    " % (txt_space, txt_region)
+        txt += "" if not txt_context else ("%s\n    " % txt_context)
+        txt += "" if not txt_category else ("%s\n    " % txt_category)
+         
+        return txt
+    
+    #-----
+    def getAddonParts(self, context):
         pps = context.scene.chichige_add_snippet_props
         
         txt = ""
@@ -516,59 +574,6 @@ class AddSnippetOp_Samples(bpy.types.Operator):
             txt = txt_GPL
         
         return txt
-
-    #---- 
-    def getPanelPlace(self, context):
-        pps = context.scene.chichige_add_snippet_props
-                
-        # below is True only when called when "CodeSamples > PanelClass"
-        # because 'SEPARATOR' is blocked in PanelPlace section by ".enabled = False".
-        if pps.panelSpace.startswith('SEPA'):
-            return "bl_space_type = 'VIEW_3D'\n    bl_region_type = 'TOOLS'\n"
-        
-        txt = ""
-        txt_space = "bl_space_type = '%s'" % pps.panelSpace
-        if pps.panelSpace == 'VIEW_3D' or pps.panelSpace == 'CLIP_EDITOR':
-            txt_region = pps.panelRegion_view3d_clip
-        elif pps.panelSpace == 'PROPERTIES' or pps.panelSpace == 'USER_PREFERENCES':
-            txt_region = 'WINDOW'
-        elif pps.panelSpace == 'FILE_BROWSER':
-            txt_region = 'CHANNELS'
-        elif pps.panelSpace == 'IMAGE_EDITOR':
-            txt_region = pps.panelRegion_image
-        elif pps.panelSpace == 'NODE_EDITOR':
-            txt_region = pps.panelRegion_node
-        else:
-            txt_region = 'UI'
-        txt_region = "bl_region_type = '%s'" % txt_region
-        
-        txt_context = ""
-        txt_category = ""
-        if pps.panelSpace == 'VIEW_3D':
-            if pps.panelContext_view3d != 'NO':
-                txt_context = "bl_context = '%s'" % pps.panelContext_view3d
-            
-            if pps.panelRegion_view3d_clip == 'TOOLS':
-                if pps.panelContext_view3d == 'objectmode':
-                    txt_category = pps.panelCategory_objectmode
-                elif pps.panelContext_view3d == 'mesh_edit':
-                    txt_category = pps.panelCategory_editmode
-                else:
-                    txt_category = pps.panelCategory_others
-                
-                if txt_category == 'NO':
-                    txt_category = "" 
-                else:
-                    txt_category = "bl_category = '%s'" % txt_category                  
-        
-        elif pps.panelSpace == 'PROPERTIES':
-            txt_context = "bl_context = '%s'" % pps.panelContext_properties
-        
-        txt += "    %s\n    %s\n    " % (txt_space, txt_region)
-        txt += "" if not txt_context else ("%s\n    " % txt_context)
-        txt += "" if not txt_category else ("%s\n    " % txt_category)
-         
-        return txt
     
     #---- 
     def getUILayoutMembers(self, context):
@@ -580,8 +585,8 @@ class AddSnippetOp_Samples(bpy.types.Operator):
         elif not txt.endswith('()'):
             txt += " = "
         return txt
-    
-    #CURRENT_Operator
+
+            
     #-----
     def getKeymap(self, context):
         pps = context.scene.chichige_add_snippet_props
@@ -649,7 +654,7 @@ class AddSnippetOp_Samples(bpy.types.Operator):
         matchTitle =   " < MATCH > : "
         similarTitle = "  Similar  : "
         
-        text += "-- %s %s\n" % (km.name, "-" * 50 )
+        text += "-- %s %s\n" % (km.name, "-" * (60 - len(km.name)) )
         for kmi in km.keymap_items:
             if kmi.map_type == pps.kmiMapType and (kmi.map_type == 'TEXTINPUT' or (kmi.map_type != 'TEXTINPUT' and kmi.type == pps.kmiType)):
                 
@@ -772,7 +777,7 @@ class AddSnippetPanel(bpy.types.Panel):
         
         row = layout.row(align = True)
         row.prop(pps, "isToolbarPropsClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarPropsClosed else "TRIA_DOWN")
-        row.label('Properties' + '-' * 80)
+        row.label('Properties ' + '-' * (110 - len('Properties ')))
         if not pps.isToolbarPropsClosed:
             row = layout.row(align = True)
             row.operator(AddSnippetOp_Props.bl_idname, text = "ClearAll").type = "CHECK_CLEAR"
@@ -829,27 +834,12 @@ class AddSnippetPanel(bpy.types.Panel):
             row.operator(AddSnippetOp_Props.bl_idname, text = "Enum").type = 'Enum'
             split.operator(AddSnippetOp_Props.bl_idname, text = "Collection").type = 'Collection'
             split.operator(AddSnippetOp_Props.bl_idname, text = "Pointer").type = 'Pointer'
-        
-        # CodeSamples-----------
-        layout.separator()
-        row = layout.row(align = True)
-        row.label(icon = "MOVE_DOWN_VEC")
-        row.label('Code Samples' + '-' * 80)
-        row = layout.row(align = True)
-        row.prop(pps, 'snippetSample', text="")
-        
-        #row = row.row() #I want the button to be sticked to enum list. This way slightly separates. 
-        #row.enabled = not pps.uiLayoutMembers.startswith('SEPA')
-        if not pps.snippetSample.startswith('SEPA'):
-            row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "CodeSamples"
-        else:
-            row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
-
+            layout.separator()
+            
         # Panel Place ------
-        layout.separator()
         row = layout.row(align = True)
         row.prop(pps, "isToolbarPanelPlaceClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarPanelPlaceClosed else "TRIA_DOWN")
-        row.label('Panel Place' + '-' * 80)
+        row.label('Panel Place ' + '-' * (110 - len('Panel Place ')))
         if not pps.isToolbarPanelPlaceClosed:
             split = layout.split(0.25)
             colLabel = split.column()
@@ -905,31 +895,54 @@ class AddSnippetPanel(bpy.types.Panel):
             row = colButton.row() 
             row.enabled = not pps.panelSpace.startswith('SEPA')
             row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "PanelPlace"
+            layout.separator()
             
-        # UILayoutM Members ------
-        layout.separator()
+        # CodeSamples-----------
         row = layout.row(align = True)
-        row.prop(pps, "isToolbarUILayoutClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarUILayoutClosed else "TRIA_DOWN")
-        row.label('UILayout Members' + '-' * 80)
-        if not pps.isToolbarUILayoutClosed:
-            layout.prop(pps, "isAddUILayoutParams", text = "Includes all parameters")
-            row = layout.row(align = True)
-            row.prop(pps, 'uiLayoutMembers', text="")
+        row.prop(pps, "isToolbarReminderClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarReminderClosed else "TRIA_DOWN")
+        row.label('Code Samples ' + '-' * (110 - len('Code Samples ')))
+        if not pps.isToolbarReminderClosed:
+            col = layout.column(align = True)
+            col.label("Addon Parts")
             #row = row.row() #I want the button to be sticked to enum list. This way slightly separates. 
             #row.enabled = not pps.uiLayoutMembers.startswith('SEPA')
+            row = col.row(align = True)
+            row.prop(pps, 'addonParts', text="")            
+            if not pps.addonParts.startswith('SEPA'):
+                row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "AddonParts"
+            else:
+                row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
+    
+            #CURRENT_PANEL
+            layout.separator()
+            col = layout.column(align = True)
+            col.label("Hint Snippets")
+            row = col.row(align = True)
+            row.prop(pps, 'hintSnippets', text = "")
+            if not pps.hintSnippets.startswith('SEPA'):
+                row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "HintSnippets"
+            else:
+                row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
+            
+            layout.separator()
+            col = layout.column(align = True)
+            col.label("UILayout Members")
+            col.prop(pps, "isAddUILayoutParams", text = "Includes all parameters")
+            row = col.row(align = True)
+            row.prop(pps, 'uiLayoutMembers', text="")
             if not pps.uiLayoutMembers.startswith('SEPA'):
                 row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "UILayoutMembers"
             else:
                 row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
             
-        #CURRENT_PANEL
+            layout.separator()
+
         # Keymapping ------
         # prop(full_event = True) not worked despite effort with various EnumProperty settings.
         # propvalue (used when km.is_modal is true) can't be filtered out the value. so, just hide it.
-        layout.separator()
         row = layout.row(align = True)
         row.prop(pps, "isToolbarKeymapClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarKeymapClosed else "TRIA_DOWN")
-        row.label('Keymapping' + '-' * 80)
+        row.label('Keymapping ' + '-' * (110 - len('Keymaping ')))
         if not pps.isToolbarKeymapClosed:
             split = layout.split(0.9)
             colLeft = split.column()
@@ -961,7 +974,7 @@ class AddSnippetPanel(bpy.types.Panel):
                     subRow = row.row()
                     subRow.enabled = not pps.kmIsModal
                     subRow.prop(pps, "isKmiCallMenu", text="(Call Menu)")            
-                    row.prop(pps, "kmiKeyMod")
+                    row.prop(pps, "kmiKeyMod", text = "Mod")
             
             # determine button position
             colButton.label("")
@@ -977,6 +990,8 @@ class AddSnippetPanel(bpy.types.Panel):
             
             colLeft.separator()
             colLeft.operator(AddSnippetOp_Samples.bl_idname, text="Check Confilicts to Console").type = 'CheckKeymapConflicts'
+            
+            layout.separator()
     
 ###########################################################                
 class ChichigeBookmarkPanel(bpy.types.Panel):
@@ -1265,19 +1280,6 @@ class AddSnippetProps(bpy.types.PropertyGroup):
     isAddEnumFlag =  BoolProperty(name = "ENUM_FLAG", description = "Add ENUM_FLAG to options", default = False)
     
     isClipboard = BoolProperty(name = "Copy to Clipboard instead of Insertion")
-    snippetSample = EnumProperty(items = [('OperatorClass',   'Operator Class', ''),
-                                          ('PanelClass',      'Panel Class', ''),
-                                          ('Props(Operator)', 'Properties (Operator)', ''),
-                                          ('PropGroup',       'PropertyGroup (Scene)', ''),
-                                          ('CollectProp',     'CollectionProp (Scene)', ''),
-                                          ('SEPARATOR',       '-' * 30, ''),
-                                          ('bl_info',         'bl_info', ''),
-                                          ('MenuFunc',        'Menu Function', ''),
-                                          ('Register',        'Register', ''),
-                                          ('RegKeymap',       'Reg with Keymap', ''),
-                                          ('GPL',             'GPL Block', '')],
-                                 name = "Snippet Code Samples")
-
     #-----
     panelSpace = EnumProperty(items = [('VIEW_3D',          '3D View',               '', 'VIEW3D',      0),
                                        ('GRAPH_EDITOR',     'Graph Editor',          '', 'IPO',         1), 
@@ -1338,12 +1340,39 @@ class AddSnippetProps(bpy.types.PropertyGroup):
     panelCategory_editmode =   EnumProperty(items = getPanelCategoryItems_editmode,   name = "Tab", description = "bl_category of Panel class")
     panelCategory_others =     EnumProperty(items = getPanelCategoryItems_others,     name = "Tab", description = "bl_category of Panel class")
     
+    addonParts = EnumProperty(items = [('OperatorClass',   'Operator Class', ''),
+                                       ('PanelClass',      'Panel Class', ''),
+                                       ('Props(Operator)', 'Properties (Operator)', ''),
+                                       ('PropGroup',       'PropertyGroup (Scene)', ''),
+                                       ('CollectProp',     'CollectionProp (Scene)', ''),
+                                       ('SEPARATOR',       '-' * 30, ''),
+                                       ('bl_info',         'bl_info', ''),
+                                       ('MenuFunc',        'Menu Function', ''),
+                                       ('Register',        'Register', ''),
+                                       ('RegKeymap',       'Reg with Keymap', ''),
+                                       ('GPL',             'GPL Block', '')],
+                                 name = "Addon Parts")
+    #REF
+    hintSnippets = EnumProperty(items = [('Basic',               'Basic', ''),
+                                         ('BatchLoop',           'Batch Loop', ''),
+                                         ('DuplicateObject',     'Duplicate Object', ''),
+                                         ('SEPARATOR',           '-' * 30, ''),
+                                         ('CreateNewMesh',       'Create New Mesh', ''),
+                                         ('AddNewMaterial',      'Add New Material', ''),
+                                         ('AddNewTexture',       'Add New Texture', ''),
+                                         ('AddAndApplyModifier', 'Add and Apply Modifier', ''),
+                                         ('AddConstraint',       'Add Constraint', ''),
+                                         ('SEPARATOR',           '-' * 30, ''),
+                                         ('CreateNewArmature',   'Create New Armature', ''),
+                                         ('ManipulatePoseBones', 'Manipulate Pose Bones', ''),
+                                         ('SEPARATOR',           '-' * 30, ''),
+                                         ('AddNewNodes',         'Add New Nodes', ''),
+                                         ('AddFCurve',           'Add FCurve', '')],
+                                 name = "Hint Snippets")
+        
     isAddUILayoutParams = BoolProperty(name = "Add All Parameters", description = "Includes all parameters if checked")
     uiLayoutMembers = EnumProperty(items = getUILayoutMemberItems, name = "Members of UILayout", description = "Reminder purpose")
                                   
-    isBookmarkFindAll = BoolProperty(name = "Find All", description = "Search All Files for the Bookmark")                             
-    bookmarks = CollectionProperty(type = BookmarkCollection)
-    
     #---- keymapping -------
     kmName = EnumProperty(items = getKmName, name = "Keymap Name", update = update_kmName)
     kmSpaceType = StringProperty() #set by update_kmName() to reduce overhead
@@ -1352,10 +1381,10 @@ class AddSnippetProps(bpy.types.PropertyGroup):
     
     #kmiIdName = StringProperty()
     #kmiPropVal =  StringProperty()
-    kmiMapType =  EnumProperty(items = getKmiMapType)
+    kmiMapType =  EnumProperty(items = getKmiMapType, name = "KeymapItem MapType")
     kmiType = EnumProperty(items = getKmiType, name = "KeymapItem Type")
     kmiValue = EnumProperty(items = getKmiValue, name = "KeymapItem Value")
-    kmiKeyMod = EnumProperty(items = getKmiKeyMod)
+    kmiKeyMod = EnumProperty(items = getKmiKeyMod, name = "KeymapItem KeyModifier")
     
     isKmiAny =   BoolProperty(name = "Any",   set = set_kmiAny,   get = get_kmiAny) 
     isKmiShift = BoolProperty(name = "Shift", set = set_kmiShift, get = get_kmiShift)
@@ -1363,13 +1392,16 @@ class AddSnippetProps(bpy.types.PropertyGroup):
     isKmiAlt =   BoolProperty(name = "Alt",   set = set_kmiAlt,   get = get_kmiAlt)
     isKmiOskey = BoolProperty(name = "Cmd",   set = set_kmiOskey, get = get_kmiOskey)
     kmiKeysBit = IntProperty() #Any : 1, Shift : 2, Ctrl : 4, Alt : 8, Oskey : 16
-    isKmiCallMenu = BoolProperty(description = "Check this if you want to use this to pop up a menu")
+    isKmiCallMenu = BoolProperty(description = "Check if you want to use the keymap to pop up a menu")
     
-    #REF
+    #----Bookmark
+    isBookmarkFindAll = BoolProperty(name = "Find All", description = "Search All Files for the Bookmark")                             
+    bookmarks = CollectionProperty(type = BookmarkCollection)
+
     #------ Collapse toolbar ---------
     isToolbarPropsClosed = BoolProperty()
     isToolbarPanelPlaceClosed = BoolProperty(default = True)
-    isToolbarUILayoutClosed = BoolProperty(default = True)
+    isToolbarReminderClosed = BoolProperty(default = True)
     isToolbarKeymapClosed = BoolProperty(default = True)
     
     
@@ -1413,6 +1445,7 @@ if __name__ == "__main__":
 # belows are used from both TemplateGeneratorOp and CodeSamplesOp
 ####################################################################################        
 #Text blocks at last ===
+
 
 txt_GPL = """\
 # ##### BEGIN GPL LICENSE BLOCK #####
@@ -1571,4 +1604,216 @@ my_item.value = 1000
 my_item = bpy.context.scene.addongen_hello_world_collection.add()
 my_item.name = "Eggs"
 my_item.value = 30
+"""
+
+#---------------------------------
+# variable name should match the enum value
+#CURRENT
+txt_hint_Basic = """\
+        #INFO, WARNING, ERROR
+        self.report({'INFO'}, "Hello World!") 
+        
+        #Python: True if A == B else False (Not-Python: A == B ? true : false)
+        print("Identical" if context.object == context.active_object else "Different")#True
+        
+        print("%s has %d objects" % (context.scene.name, len(context.scene.objects)))
+        
+        print(context.scene.cursor_location)
+        print(context.scene.frame_current)
+        
+        #CYCLES, BLENDER_RENDER, BLENDER_GAME
+        print(context.scene.render.engine) 
+        
+        #MESH, CURVE, SURFACE, META, FONT, ARMATURE, LATTICE, EMPTY, CAMERA, LAMP, SPEAKER
+        print(context.object.type)
+        
+        #OBJECT, EDIT, POSE, SCULPT, VERTEX_PAINT, WEIGHT_PAINT, TEXTURE_PAINT, PARTICLE_EDIT    
+        bpy.ops.object.mode_set(mode = 'OBJECT')  
+        
+        obj = context.scene.objects[0] #replace this
+        context.scene.objects.active = obj
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select = True
+
+        obj.layers = [i in [0, 19] for i in range(20)] # Base 0
+        obj.layers = [True for i in range(20)] # all
+        
+        #FINISHED, CANCELLED, RUNNING_MODAL, PASS_THROUGH
+        return {'FINISHED'}
+"""        
+
+txt_hint_BatchLoop = """\
+        #for selection
+        for obj in context.selected_objects:
+            obj.show_name = not obj.show_name #toggle
+        
+        #for objects in a group
+        groupName = "GroupName"
+        if not groupName in bpy.data.groups:
+            self.report({'WARNING'}, "%s was not found" % groupName)
+            return {'CANCELLED'}
+        else:
+            for obj in bpy.data.groups[groupName].objects:
+                obj.show_axis = not obj.show_axis
+            
+        return {'FINISHED'}
+"""
+
+txt_hint_DuplicateObject = """\
+        scene = context.scene
+        
+        obj_alt = context.object.copy()
+        scene.objects.link(obj_alt)
+        obj_alt.location = scene.cursor_location
+        obj_alt.location.x += 1
+        
+        obj_shift = context.object.copy()
+        obj_shift.data = obj_shift.data.copy()
+        scene.objects.link(obj_shift)
+        obj_shift.location = scene.cursor_location
+        obj_shift.location.x -= 1
+"""
+
+txt_hint_AddNewMaterial = """\
+        obj = context.object
+        if len(obj.material_slots) == 0:
+            print("No material found.")
+        else:
+            print("material_slots[0].link = %s" % obj.material_slots[0].link)
+            if not obj.material_slots[0].material:
+                print("material_slots[0] exists but empty.")
+        
+        print("active : %s, %d" % (obj.active_material, obj.active_material_index))
+            
+        mat = bpy.data.materials.new("Yellow")
+        mat.diffuse_color = (1, 1, 0)
+        mat.specular_intensity = 0.2
+        obj.data.materials.append(mat)
+"""
+txt_hint_AddNewTexture = """\
+        mat = context.object.active_material        
+        if len(mat.texture_slots) == 0:
+            print("No texture found.")
+        else:
+            #texture_slots[0] can be None
+            for slot in mat.texture_slots:
+                if slot and slot.texture:
+                    print("tex.type = %s" % slot.texture.type)
+                    break
+        
+        print("active : %s, %d" % (mat.active_texture, mat.active_texture_index))
+            
+        tex = bpy.data.textures.new("MyClouds", type = 'CLOUDS')
+        tex.noise_basis = 'ORIGINAL_PERLIN'
+        slot = mat.texture_slots.add()
+        slot.texture = tex
+        slot.use_map_normal = True
+        slot.normal_factor = 0.1
+"""
+
+txt_hint_CreateNewMesh = """\
+        verts = [(-1, 1, 0),
+                 (1, 1, 0),
+                 (1, -1, 0),
+                 (-1, -1, 0)
+                ]
+        edges = []
+        faces = [[0, 1, 2, 3]]
+        
+        mesh = bpy.data.meshes.new(name="ObjectDataName")
+        obj = bpy.data.objects.new("ObjectName", mesh)
+
+        scene = context.scene
+        scene.objects.link(obj)        
+        scene.objects.active = obj
+        obj.location = scene.cursor_location
+        bpy.ops.object.select_all(action='DESELECT') 
+        obj.select = True
+
+        mesh.from_pydata(verts, edges, faces)
+        mesh.update()
+"""
+
+txt_hint_CreateNewArmature = """\
+        scene = context.scene
+        
+        arma = bpy.data.armatures.new("ArmatureDataName")
+        obj = bpy.data.objects.new("AramatureObjectName", arma)
+        obj.location = scene.cursor_location
+
+        scene.objects.link(obj)
+        scene.objects.active = obj
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select = True
+        
+        bpy.ops.object.mode_set(mode='EDIT')
+        bone1 = arma.edit_bones.new('Bone')
+        bone1.head = (0,0,0)
+        bone1.tail = (0,0,1)
+        bone2 = arma.edit_bones.new('Bone.001')
+        bone2.head = bone1.tail
+        bone2.tail = (0,0,2)
+        bone2.parent = bone1
+        bone2.use_connect = True
+        bpy.ops.object.mode_set(mode='OBJECT')
+"""
+
+txt_hint_ManipulatePoseBones = """\
+        import math
+        bpy.ops.object.mode_set(mode='POSE')
+        
+        bone1 = context.object.pose.bones[0]
+        bone1.rotation_mode = 'XYZ'
+        bone1.rotation_euler.x = math.radians(90)
+        bone1.lock_location = [True, True, True]
+        
+        bone2 = context.object.pose.bones[1]
+        bone2.rotation_quaternion.x = -1
+        cnst = bone2.constraints.new('LIMIT_ROTATION')
+        cnst.name = "Constraint Name"
+        cnst.use_limit_y = True
+        cnst.owner_space = 'LOCAL'
+        
+        bpy.ops.object.mode_set(mode='OBJECT')
+"""
+
+txt_hint_AddAndApplyModifier = """\
+        mod = context.object.modifiers.new("ModName", 'ARRAY')
+        mod.count = 3
+        mod.relative_offset_displace = (1.2, 0, 0)
+        bpy.ops.object.modifier_apply(apply_as='DATA', modifier = mod.name)
+"""
+
+txt_hint_AddConstraint = """\
+        cnst = context.object.constraints.new('LIMIT_LOCATION')
+        cnst.name = 'ConstraintName'
+        cnst.use_min_x = True
+        cnst.min_x = 0
+        cnst.use_transform_limit = True
+"""
+
+txt_hint_AddNewNodes= """\
+        #Belows point identical object
+        context.active_node
+        #context.area.spaces.active.node_tree.nodes.active == context.active_node
+        #context.active_object.active_material.node_tree.nodes.active == context.active_node 
+        #(node_tree is None until .use_nodes becomes True)
+        
+        difNode = node_tree.nodes.new(type = 'ShaderNodeBsdfDiffuse')
+        outNode = node_tree.nodes.new(type = 'ShaderNodeBsdfDiffuse')
+        outNode.location.x = 300
+        node_tree.links.new(difNode.outputs['BSDF'], outNode.inputs['Surface'])
+"""
+
+txt_hint_AddFCurve = """\    
+        #data_path and index decide the prop. (eg "location" & [2] points loc z')
+        #obj.animation_data also holds .drivers and .nla_tracks
+        #useful prop : context.scene.frame_current
+    
+        obj = context.object
+        obj.animation_data_create()
+        obj.animation_data.action = bpy.data.actions.new(name="MyAction")
+        fc_z = obj.animation_data.action.fcurves.new(data_path="location", index=2)
+        fc_z.keyframe_points.add(2)
+        fc_z.keyframe_points[0].co = 10.0, 0.0')
 """
