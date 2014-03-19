@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Addon Template Generator",
     "author": "chichige-bobo",
-    "version": (0, 9, 7),
+    "version": (0, 9, 8),
     "blender": (2, 69, 0),
     "location": "TextEditor > Templates > AddonTemplateGenerator, TextEditor > PropertiesBar > AddSnippet/Bookmarks",
     "description": "Generate empty addon template. Add snippet of propertes and samples",
@@ -519,11 +519,11 @@ class AddSnippetOp_Samples(bpy.types.Operator):
         pps = context.scene.chichige_add_snippet_props
         
         txt = ""
-        if pps.snippetSample == "OperatorClass":
+        if pps.addonParts == "OperatorClass":
             #txt_operator % (className, "ToolTip", bl_idname, bl_label, \t(bl_options)\n\n, (props)) 
             txt = txt_operator % ("HelloWorldOperator", '"ToolTip of HelloWorldOperator"', "addongen.hello_world_operator", "Hello World Operator", "    bl_options = {'REGISTER'}\n\n", "")
             
-        elif pps.snippetSample == "PanelClass":
+        elif pps.addonParts  == "PanelClass":
             #txt_panel % (ClassName, "ToolTip", bl_idname, bl_label, SpaceRegion, bl_context, OperatorClassName)                    
             if pps.panelSpace.startswith("SEPA"):
                 temp = 'VIEW3D'
@@ -537,27 +537,27 @@ class AddSnippetOp_Samples(bpy.types.Operator):
             txt_panelPlace = self.getPanelPlace(context)[4:]
             txt = txt_panel % ("HelloWorldPanel", '"ToolTip of HelloWorldPanel"', txt_blIdname_p, "Hello World Panel", txt_blOptions_p, txt_panelPlace, "HelloWorldOperator")
         
-        elif pps.snippetSample == "Props(Operator)":
+        elif pps.addonParts  == "Props(Operator)":
             txt = txt_props
         
-        elif pps.snippetSample == "PropGroup":
+        elif pps.addonParts  == "PropGroup":
             txt = "class MySceneProps(bpy.types.PropertyGroup):\n" + txt_props
             txt += "bpy.utils.register_class(MySceneProps)\n"
             txt += "bpy.types.Scene.addongen_hello_world_props = PointerProperty(type = MySceneProps)\n"
         
-        elif pps.snippetSample == "CollectProp":
+        elif pps.addonParts  == "CollectProp":
             txt = txt_collectionProp
             
-        elif pps.snippetSample == "bl_info":
+        elif pps.addonParts == "bl_info":
             txt = txt_blInfo % "Hello World"
         
-        elif pps.snippetSample == "MenuFunc":
+        elif pps.addonParts == "MenuFunc":
             txt += "def menu_func(self, context):\n"
             txt += "    self.layout.operator(HelloWorldOperator.bl_idname, icon = 'PLUGIN')\n"
             txt += "#bpy.types.VIEW3D_MT_object.append(menu_func) #put in register()\n"
             txt += "#bpy.types.VIEW3D_MT_object.remove(menu_func) #put in unregister()\n"
 
-        elif pps.snippetSample == "Register" or pps.snippetSample == "RegKeymap":
+        elif pps.addonParts  == "Register" or pps.addonParts == "RegKeymap":
             temp1 = "bpy.utils.register_class(HelloWorldOperator)"
             temp1 += "\n    #bpy.utils.register_class(HelloWorldPanel)"
             temp1 += "\n    #bpy.types.VIEW3D_MT_object.append(menu_func)"
@@ -565,12 +565,12 @@ class AddSnippetOp_Samples(bpy.types.Operator):
             temp2 += "\n    #bpy.utils.unregister_class(HelloWorldPanel)"
             temp2 += "\n    #bpy.types.VIEW3D_MT_object.remove(menu_func)"
             
-            if pps.snippetSample == "Register":
+            if pps.addonParts == "Register":
                 txt += txt_reg % (temp1, temp2)
             else:
                 txt += txt_reg_keymap % (temp1, 'HelloWorldOperator', temp2)
             
-        elif pps.snippetSample == "GPL":
+        elif pps.addonParts == "GPL":
             txt = txt_GPL
         
         return txt
@@ -899,9 +899,9 @@ class AddSnippetPanel(bpy.types.Panel):
             
         # CodeSamples-----------
         row = layout.row(align = True)
-        row.prop(pps, "isToolbarReminderClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarReminderClosed else "TRIA_DOWN")
+        row.prop(pps, "isToolbarCodeSamplesClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarCodeSamplesClosed else "TRIA_DOWN")
         row.label('Code Samples ' + '-' * (110 - len('Code Samples ')))
-        if not pps.isToolbarReminderClosed:
+        if not pps.isToolbarCodeSamplesClosed:
             col = layout.column(align = True)
             col.label("Addon Parts")
             #row = row.row() #I want the button to be sticked to enum list. This way slightly separates. 
@@ -1354,12 +1354,13 @@ class AddSnippetProps(bpy.types.PropertyGroup):
                                  name = "Addon Parts")
     #REF
     hintSnippets = EnumProperty(items = [('Basic',               'Basic', ''),
-                                         ('BatchLoop',           'Batch Loop', ''),
+                                         ('BasicForLoop',        'Basic For Loop', ''),
                                          ('DuplicateObject',     'Duplicate Object', ''),
                                          ('SEPARATOR',           '-' * 30, ''),
                                          ('CreateNewMesh',       'Create New Mesh', ''),
                                          ('AddNewMaterial',      'Add New Material', ''),
                                          ('AddNewTexture',       'Add New Texture', ''),
+                                         ('AddNewUVMap',         'Add New UVMap', ''),
                                          ('AddAndApplyModifier', 'Add and Apply Modifier', ''),
                                          ('AddConstraint',       'Add Constraint', ''),
                                          ('SEPARATOR',           '-' * 30, ''),
@@ -1401,7 +1402,7 @@ class AddSnippetProps(bpy.types.PropertyGroup):
     #------ Collapse toolbar ---------
     isToolbarPropsClosed = BoolProperty()
     isToolbarPanelPlaceClosed = BoolProperty(default = True)
-    isToolbarReminderClosed = BoolProperty(default = True)
+    isToolbarCodeSamplesClosed = BoolProperty(default = True)
     isToolbarKeymapClosed = BoolProperty(default = True)
     
     
@@ -1517,7 +1518,7 @@ class %s(bpy.types.Operator):
     #    return {'RUNNING_MODAL'}  
     #    return wm.invoke_porps_dialog(self)
     #def modal(self, context, event):
-    #def draw(self, context, event):
+    #def draw(self, context):
 
 """
 
@@ -1642,7 +1643,7 @@ txt_hint_Basic = """\
         return {'FINISHED'}
 """        
 
-txt_hint_BatchLoop = """\
+txt_hint_BasicForLoop = """\
         #for selection
         for obj in context.selected_objects:
             obj.show_name = not obj.show_name #toggle
@@ -1711,6 +1712,52 @@ txt_hint_AddNewTexture = """\
         slot.normal_factor = 0.1
 """
 
+txt_hint_AddNewUVMap = """\
+        #prepare images to be assigned to faces
+        img1 = bpy.data.images.new('Grid', 300, 300)
+        img1.generated_type = 'UV_GRID'
+        img2 = bpy.data.images.new('ColorGrid', 300, 300)
+        img2.generated_type = 'COLOR_GRID'       
+
+        #.data is accessible only in ObjectMode. 
+        # It's better to do this early.
+        #http://www.blender.org/documentation/blender_python_api_2_69_release/info_gotcha.html#edit-mode-memory-access
+        bpy.ops.object.mode_set(mode = 'OBJECT')
+
+        mesh = context.object.data
+        if len(mesh.uv_textures) == 8:
+            uvTex = mesh.uv_textures[mesh.uv_textures.active_index]
+            uvLayer = mesh.uv_layers[mesh.uv_textures.active_index]
+        else:
+            uvTex = mesh.uv_textures.new("UVMap")
+            for i in range(len(mesh.uv_textures)):
+                if mesh.uv_textures[i] == uvTex:
+                    uvLayer = mesh.uv_layers[i]
+                    break
+        
+        for i, poly in enumerate(mesh.polygons):
+            print(i, poly)
+            for j in poly.loop_indices:
+                uv = uvLayer.data[j].uv
+                uvLayer.data[j].uv = (uv[0] + (i / 10), uv[1])
+            uvTex.data[i].image = img1 if i % 3 != 0 else img2
+        
+        print("\n" + "-" * 30)
+        print("len(mesh.loops) = %d" % len(mesh.loops))
+        print("len(uvLayer.data) = %d" % len(uvLayer.data))
+        print("len(mesh.polygons) = %d" % len(mesh.polygons))
+        print("len(uvTex.data) = %d" % len(uvTex.data))
+        
+        poly = mesh.polygons[-1]
+        print("\nlen(mesh.polygons[0].vertices) = %d" % len(poly.vertices))
+        print("mesh.polygons[-1].loop_indices = %s" % poly.loop_indices)
+        print("mesh.polygons[-1].loop_start = %d" % poly.loop_start)
+        print("mesh.polygons[-1].loop_total = %d" % poly.loop_total)
+        print("mesh.polygons[-1].material_index = %d" % poly.material_index)             
+            
+        bpy.ops.object.mode_set(mode = 'EDIT')
+"""
+
 txt_hint_CreateNewMesh = """\
         verts = [(-1, 1, 0),
                  (1, 1, 0),
@@ -1731,7 +1778,7 @@ txt_hint_CreateNewMesh = """\
         obj.select = True
 
         mesh.from_pydata(verts, edges, faces)
-        mesh.update()
+        mesh.update(calc_edges=True)
 """
 
 txt_hint_CreateNewArmature = """\
