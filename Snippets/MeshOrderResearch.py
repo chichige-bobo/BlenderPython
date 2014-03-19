@@ -24,7 +24,7 @@ class MeshOrderResearchOperator(bpy.types.Operator):
     
     @classmethod
     def poll(cls, context):
-        return context.object.type == 'MESH'
+        return context.object and context.object.type == 'MESH'
      
     def execute(self, context):
         me = context.object.data
