@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Addon Template Generator",
     "author": "chichige-bobo",
-    "version": (1, 0, 0),
+    "version": (1, 0, 1),
     "blender": (2, 70, 0),
     "location": "TextEditor > Templates > AddonTemplateGenerator, TextEditor > PropertiesBar > AddSnippet",
     "description": "Generate empty addon template. Add snippet of propertes and samples",
@@ -150,7 +150,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         
         #-----
         if self.isUseSceneProps:
-            txt += "class MySceneProps(bpy.types.PropertyGroup):\n" + txt_props + "\n"
+            txt += ("class %sProps(bpy.types.PropertyGroup):\n" % txt_name.replace(" ", "")) + txt_props + "\n"
            
         #-----
         if self.isUseMenuFunc:
@@ -161,11 +161,11 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         temp1 = ""
         temp2 = ""
         if self.isUseSceneProps:
-            temp1 += "bpy.utils.register_class(MySceneProps)\n"
-            temp1 += "    bpy.types.Scene.%s_props = PointerProperty(type = MySceneProps)\n\n" % txt_blIdname.replace(".", "_")
+            temp1 += "bpy.utils.register_class(%sProps)\n" % txt_name.replace(" ", "") 
+            temp1 += "    bpy.types.Scene.%s_props = PointerProperty(type = %sProps)\n\n" % ("addongen_" + txt_name.replace(" ", "_").lower(), txt_name.replace(" ", ""))
             temp1 += "    "
-            temp2 += "bpy.utils.unregister_class(MySceneProps)\n"
-            temp2 += "    #del bpy.types.Scene.%s_props\n\n" % txt_blIdname.replace(".", "_")
+            temp2 += "bpy.utils.unregister_class(%sProps)\n" % txt_name.replace(" ", "")
+            temp2 += "    #del bpy.types.Scene.%s_props\n\n" % ("addongen_" + txt_name.replace(" ", "_").lower())
             temp2 += "    "
             
         temp1 += "bpy.utils.register_class(%s)" % txt_className
@@ -186,7 +186,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
                 txt += txt_reg_keymap % (temp1, txt_className + ".bl_idname", "#kmi.properties.prop1 = 'some'", temp2)
         
         #-----
-        textObj = bpy.data.texts.new(txt_name.replace(" ", "_"))
+        textObj = bpy.data.texts.new(txt_name.replace(" ", "_") + ".py")
         textObj.write(txt)
         context.space_data.text = textObj
         self.report({'INFO'}, "'%s' was created." % textObj.name)
