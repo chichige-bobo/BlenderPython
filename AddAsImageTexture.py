@@ -2,8 +2,8 @@ bl_info = {
     "name": "AddAsImageTexture",
     "description": "Add current uv map image as real texture",
     "author": "Chichige-Bobo",
-    "version": (1, 1),
-    "blender": (2, 69),
+    "version": (1, 2),
+    "blender": (2, 74),
     "location": "UV/ImageEditor > AddAsTexture(header)",
     "warning": "", # used for warning icon and text in addons panel
     "wiki_url": "",
@@ -14,7 +14,7 @@ bl_info = {
 #   (not assign to any faces explicitly.)
 #   
 # Cycles -------------
-#   2.AttributeNode with UV map name and ImageTextureNode added.
+#   2.UVMapNode with UV map name and ImageTextureNode added.
 #   3.If no output node found, new output and diffuse nodes are added then connected.  
 # 
 # Internal (node) -------
@@ -28,6 +28,7 @@ bl_info = {
 #
 #############################################################
 # ChangeLog
+#   1.2 Replaced AttributeNode to UVMapNode
 #   1.1 Node support (Cycles and Internal) added. 
 #   1.0 released
 ##############################################################
@@ -91,10 +92,10 @@ class AddAsImageTexture(bpy.types.Operator):
         texNode = nodes.new('ShaderNodeTexImage')
         texNode.image = context.edit_image
         texNode.location = [-300, 300]
-        attrNode = nodes.new('ShaderNodeAttribute')
-        attrNode.attribute_name = actObj.data.uv_textures.active.name
-        attrNode.location = [-600 ,300]
-        mat.node_tree.links.new(attrNode.outputs['Vector'], texNode.inputs['Vector'])
+        uvNode = nodes.new('ShaderNodeUVMap')
+        uvNode.uv_map = actObj.data.uv_textures.active.name
+        uvNode.location = [-600, 300]
+        mat.node_tree.links.new(uvNode.outputs['UV'], texNode.inputs['Vector'])
          
         if len(nodes) == 4 and nodes[0].type == 'OUTPUT_MATERIAL' and nodes[1].type == 'BSDF_DIFFUSE':
             mat.node_tree.links.new(texNode.outputs['Color'], nodes[1].inputs['Color'])
@@ -114,12 +115,12 @@ class AddAsImageTexture(bpy.types.Operator):
                 mat.node_tree.links.new(texNode.outputs['Color'], difNode.inputs['Color'])                  
 
         for n in mat.node_tree.nodes:
-            n.select = (n == attrNode or n == texNode)
+            n.select = (n == uvNode or n == texNode)
 
         mat.node_tree.nodes.active = texNode
                                     
         if mat.use_nodes:
-            self.report({'INFO'}, 'Texture is successfully added to slots!')            
+            self.report({'INFO'}, 'Texture is successfully added!')            
         else:
             self.report({'WARNING'}, 'Careful, UseNodes is off. ImageTexNode is successfully added though.')
                  
@@ -195,7 +196,7 @@ class AddAsImageTexture(bpy.types.Operator):
             texSlot.uv_layer = actObj.data.uv_textures.active.name #MeshTexturePolyLayer.name
             texSlot.texture = tex
             mat.active_texture_index = destIndex
-            self.report({'INFO'}, 'Texture is successfully added to slots!')            
+            self.report({'INFO'}, 'Texture is successfully added!')            
              
         return {'FINISHED'}
 
