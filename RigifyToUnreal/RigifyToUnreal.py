@@ -7,7 +7,7 @@
 # (Sintel model is Creative Commons Attribution 3.0
 #  You can download at BlendSwap.com. Google with 'Sintel Lite BlendSwap')
 #########################################################################
-# RigifyToUnreal : ver 1.6
+# RigifyToUnreal : ver 1.61
 # Environment : Blender 2.75a, UnrealEditor 4.9.1
 # Author : ChichigeBobo
 #########################################################################
@@ -526,7 +526,7 @@ def getFrameRange(obj):
                             if max < strip.frame_end and not isActionHampersAfter:
                                 max = strip.frame_end
         
-        if not min:
+        if min is None: #'not min' is not adequate. Because if an action starts at frame 0, it is treated as None. 
             return None
         else:
             min = math.ceil(min)
