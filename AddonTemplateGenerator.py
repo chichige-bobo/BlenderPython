@@ -2,7 +2,7 @@ bl_info = {
     "name": "Addon Template Generator",
     "author": "chichige-bobo",
     "version": (1, 0, 1),
-    "blender": (2, 70, 0),
+    "blender": (2, 80, 0),
     "location": "TextEditor > Templates > AddonTemplateGenerator, TextEditor > PropertiesBar > AddSnippet",
     "description": "Generate empty addon template. Add snippet of propertes and samples",
     "warning": "",
@@ -55,26 +55,26 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
                               default={'REGISTER'}, 
                               options = {'ENUM_FLAG'})
     
-    isUseOpProps = BoolProperty(name='Add Operator Properties', description = "Add a set of properties for this operator", default = False )
+    isUseOpProps: BoolProperty(name='Add Operator Properties', description = "Add a set of properties for this operator", default = False )
 
-    isUsePanel = BoolProperty(name='Add Panel Class', description = "Whether use Panel class.", default = True)
-    p_panelOptions = EnumProperty(items = [('DEFAULT_CLOSED', 'DefaultClosed', 'Defines if the panel has to be open or collapsed at the time of its creation'), 
+    isUsePanel: BoolProperty(name='Add Panel Class', description = "Whether use Panel class.", default = True)
+    p_panelOptions: EnumProperty(items = [('DEFAULT_CLOSED', 'DefaultClosed', 'Defines if the panel has to be open or collapsed at the time of its creation'), 
                                            ('HIDE_HEADER', 'HideHeader', 'If set to False, the panel shows a header, which contains a clickable arrow to collapse the panel and the label')],
                                   name="PanelOptions",
                                   description="bl_options for this Panel",
                                   default = set(),
                                   options = {'ENUM_FLAG'})
     
-    p_panelSpaceRegion = EnumProperty(items = getMajorSpaceRegionItems ,
+    p_panelSpaceRegion: EnumProperty(items = getMajorSpaceRegionItems ,
                                       name="SpaceRegionType", 
                                       description="Panel's bl_space_type, bl_region_type and bl_context")                                
 
-    isUseMenu = BoolProperty(name='Add Menu Class', description = "Whether use Menu class.", default = False)
+    isUseMenu: BoolProperty(name='Add Menu Class', description = "Whether use Menu class.", default = False)
 
-    isUseGPLNotice =  BoolProperty(name = 'Add GPL Notification', default = False)
-    isUseSceneProps = BoolProperty(name = 'Add Scene Properties', default = False )
-    isUseMenuFunc =   BoolProperty(name = 'Add Menu Function', default = False)
-    isUseKeymap =     BoolProperty(name = 'Add Keymapping', default = False )
+    isUseGPLNotice:  BoolProperty(name = 'Add GPL Notification', default = False)
+    isUseSceneProps: BoolProperty(name = 'Add Scene Properties', default = False )
+    isUseMenuFunc:   BoolProperty(name = 'Add Menu Function', default = False)
+    isUseKeymap:     BoolProperty(name = 'Add Keymapping', default = False )
     
     #=AddonTempGen execute=======================================
     def execute(self, context):
@@ -200,59 +200,59 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         layout = self.layout
         row = layout.row()
         row.alignment = 'CENTER'
-        row.label('(Some options can be multi-selected with Shift-Click)')
+        row.label(text='(Some options can be multi-selected with Shift-Click)')
         
         layout.separator()
         layout.prop(self, 'p_name')
         row = layout.row(align = True)
         #row.alignment = 'CENTER'
         col = row.column(align = True)
-        col.label("            When above name is 'Hello World'...")
-        col.label("                ClassName = 'HellowWorldOperator'")
-        col.label("                bl_idname = 'addongen.hello_world_operator'")
+        col.label(text="            When above name is 'Hello World'...")
+        col.label(text="                ClassName = 'HellowWorldOperator'")
+        col.label(text="                bl_idname = 'addongen.hello_world_operator'")
         
-        layout.label('Operator ' + ('-' * 110))
-        split = layout.split(0.2)
+        layout.label(text='Operator ' + ('-' * 110))
+        split = layout.split(factor=0.2)
         col_L = split.column()
         col_L.alignment = 'RIGHT'
-        col_L.label('bl_options')
-        col_L.label('Use Op Props')
+        col_L.label(text='bl_options')
+        col_L.label(text='Use Op Props')
         col_R = split.column()
         col_R.row().prop(self, 'p_opOptions')
         col_R.prop(self, 'isUseOpProps')
         
         layout.separator()
-        layout.label('Panel ' + ('-' * 116))
-        split = layout.split(0.2)
+        layout.label(text='Panel ' + ('-' * 116))
+        split = layout.split(factor=0.2)
         col_L = split.column()
         col_L.alignment = 'RIGHT'
-        col_L.label('Use Panel')
-        col_L.label('Place')
-        col_L.label('')
-        col_L.label('bl_options') 
+        col_L.label(text='Use Panel')
+        col_L.label(text='Place')
+        col_L.label(text='')
+        col_L.label(text='bl_options') 
         col_R = split.column()
         col_R.prop(self, 'isUsePanel')
         col_R.prop(self, 'p_panelSpaceRegion', text = '')
-        col_R.label('(Full list is in props panel. Replace with after completion.)')
-        row = col_R.split(0.6).row().prop(self, 'p_panelOptions')
+        col_R.label(text='(Full list is in props panel. Replace with after completion.)')
+        row = col_R.split(factor=0.6).row().prop(self, 'p_panelOptions')
 
         layout.separator()
-        layout.label('Menu ' + ('-' * 116))
-        split = layout.split(0.2)
+        layout.label(text='Menu ' + ('-' * 116))
+        split = layout.split(factor=0.2)
         split.alignment = 'RIGHT'
-        split.label('Use Menu')
+        split.label(text='Use Menu')
         #split = split.row()
         split.prop(self, 'isUseMenu')
     
         layout.separator()
-        layout.label('Misc ' + ('-' * 116))
-        split = layout.split(0.2)
+        layout.label(text='Misc ' + ('-' * 116))
+        split = layout.split(factor=0.2)
         col_L = split.column()
         col_L.alignment = 'RIGHT'
-        col_L.label('GPL Notice')
-        col_L.label('Scene Props')
-        col_L.label('Menu Func')
-        col_L.label('Keymap')
+        col_L.label(text='GPL Notice')
+        col_L.label(text='Scene Props')
+        col_L.label(text='Menu Func')
+        col_L.label(text='Keymap')
         col_R = split.column()
         col_R.prop(self, 'isUseGPLNotice')
         col_R.prop(self, 'isUseSceneProps')
@@ -270,7 +270,7 @@ class AddSnippetOp_Props(bpy.types.Operator):
     bl_label = "Add Snippet Operator - Props"
     bl_options = {'INTERNAL', 'UNDO'}
     
-    type = StringProperty(name="OperationType")
+    type: StringProperty(name="OperationType")
     
     #Added step of IntVec, unit of FloatVec                           
     refDic = {'Bool'        : "(%s, default=False, options={'ANIMATABLE'}, subtype='NONE', update=None, get=None, set=None)",
@@ -400,7 +400,7 @@ class AddSnippetOp_Samples(bpy.types.Operator):
     bl_label = "Add Snippet Operator - Samples"
     bl_options = {'INTERNAL', 'UNDO'}
     
-    type = EnumProperty(items = [('PanelPlace', 'PanelPlace', 'Insert/Copy selected place'),
+    type: EnumProperty(items = [('PanelPlace', 'PanelPlace', 'Insert/Copy selected place'),
                                  ('AddonParts', 'AddonParts', 'Insert/Copy selected addon parts'), 
                                  ('HintSnippets', 'HintSnippets', 'Insert/Copy selected hint'),
                                  ('UILayoutMembers', 'UILayoutMembers', 'Insert/Copy selected member'),
@@ -737,7 +737,7 @@ class AddSnippetPanel(bpy.types.Panel):
         
         row = layout.row(align = True)
         row.prop(pps, "isToolbarPropsClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarPropsClosed else "TRIA_DOWN")
-        row.label('Properties ' + '-' * (110 - len('Properties ')))
+        row.label(text='Properties ' + '-' * (110 - len('Properties ')))
         if not pps.isToolbarPropsClosed:
             row = layout.row(align = True)
             row.operator(AddSnippetOp_Props.bl_idname, text = "ClearAll").type = "CHECK_CLEAR"
@@ -762,12 +762,12 @@ class AddSnippetPanel(bpy.types.Panel):
             row.prop(pps, 'isAddSize')
             
             box = col.box()
-            split = box.split(0.18)
-            split.label('options')   
+            split = box.split(factor=0.18)
+            split.label(text='options')   
             row = split.row()
             row.prop(pps, 'propOptions')
-            split = box.split(0.18)
-            split.label('subtype')   
+            split = box.split(factor=0.18)
+            split.label(text='subtype')   
             row = split.row()
             row.prop(pps, 'propSubtype', text="")
             row.prop(pps, 'propVecSubtype', text="")
@@ -788,7 +788,7 @@ class AddSnippetPanel(bpy.types.Panel):
             row = layout.row(align = True)
             row.prop(pps, 'stringSubtype', text = "")
             row.operator(AddSnippetOp_Props.bl_idname, text = "String").type = 'String'
-            split = layout.split(0.5)
+            split = layout.split(factor=0.5)
             row = split.row(align = True)
             row.prop(pps, 'isAddEnumFlag')
             row.operator(AddSnippetOp_Props.bl_idname, text = "Enum").type = 'Enum'
@@ -799,38 +799,38 @@ class AddSnippetPanel(bpy.types.Panel):
         # Panel Place ------
         row = layout.row(align = True)
         row.prop(pps, "isToolbarPanelPlaceClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarPanelPlaceClosed else "TRIA_DOWN")
-        row.label('Panel Place ' + '-' * (110 - len('Panel Place ')))
+        row.label(text='Panel Place ' + '-' * (110 - len('Panel Place ')))
         if not pps.isToolbarPanelPlaceClosed:
-            split = layout.split(0.25)
+            split = layout.split(factor=0.25)
             colLabel = split.column()
-            subSplit = split.split(0.85)
+            subSplit = split.split(factor=0.85)
             colCombo = subSplit.column()
             colButton = subSplit.column()
     
-            colLabel.label('Space:')
+            colLabel.label(text='Space:')
             colCombo.prop(pps, "panelSpace", text = '')
-            colButton.label('')
+            colButton.label(text='')
             
-            colLabel.label('Region:')
+            colLabel.label(text='Region:')
             if pps.panelSpace.startswith('SEPA'):
-                colCombo.label('')
+                colCombo.label(text='')
             else:
                 if pps.panelSpace == 'VIEW_3D' or pps.panelSpace == 'CLIP_EDITOR':
                     colCombo.prop(pps, "panelRegion_view3d_clip", text = "")
                 elif pps.panelSpace == 'PROPERTIES' or pps.panelSpace == 'USER_PREFERENCES':
-                    colCombo.label("WINDOW")
+                    colCombo.label(text="WINDOW")
                 elif pps.panelSpace == 'FILE_BROWSER':
-                    colCombo.label("CHANNELS")
+                    colCombo.label(text="CHANNELS")
                 elif pps.panelSpace == 'IMAGE_EDITOR' or pps.panelSpace == 'NODE_EDITOR':
                     colCombo.prop(pps, "panelRegion_image_node", text = "")
                 else:
-                    colCombo.label("UI")
+                    colCombo.label(text="UI")
     
                 if pps.panelSpace == 'VIEW_3D':
-                    colLabel.label("Context:")
+                    colLabel.label(text="Context:")
                     colCombo.prop(pps, "panelContext_view3d", text = "")
                     if pps.panelRegion_view3d_clip == 'TOOLS':
-                        colLabel.label("Tab:")
+                        colLabel.label(text="Tab:")
                         if pps.panelContext_view3d == 'objectmode':
                             colCombo.prop(pps, "panelCategory_objectmode", text = "")
                         elif pps.panelContext_view3d == 'mesh_edit':
@@ -839,20 +839,20 @@ class AddSnippetPanel(bpy.types.Panel):
                             colCombo.prop(pps, "panelCategory_others", text = "")                        
                 
                 elif pps.panelSpace == 'PROPERTIES':
-                    colLabel.label("Context:")
+                    colLabel.label(text="Context:")
                     colCombo.prop(pps, "panelContext_properties", text = "")
                 
                 elif pps.panelSpace == 'IMAGE_EDITOR' and pps.panelRegion_image_node == 'TOOLS':
-                    colLabel.label("Tab:")
+                    colLabel.label(text="Tab:")
                     colCombo.prop(pps, "panelCategory_imageeditor", text = "")
                 
             # determine button position
             if pps.panelSpace == 'VIEW_3D':
-                colButton.label('') #region row
+                colButton.label(text='') #region row
                 if pps.panelRegion_view3d_clip == 'TOOLS':
-                    colButton.label('')
+                    colButton.label(text='')
             elif pps.panelSpace == 'PROPERTIES' or (pps.panelSpace == 'IMAGE_EDITOR' and pps.panelRegion_image_node == 'TOOLS'):
-                colButton.label('') #region row
+                colButton.label(text='') #region row
     
             row = colButton.row() 
             row.enabled = not pps.panelSpace.startswith('SEPA')
@@ -862,10 +862,10 @@ class AddSnippetPanel(bpy.types.Panel):
         # CodeSamples-----------
         row = layout.row(align = True)
         row.prop(pps, "isToolbarCodeSamplesClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarCodeSamplesClosed else "TRIA_DOWN")
-        row.label('Code Samples ' + '-' * (110 - len('Code Samples ')))
+        row.label(text='Code Samples ' + '-' * (110 - len('Code Samples ')))
         if not pps.isToolbarCodeSamplesClosed:
             col = layout.column(align = True)
-            col.label("Addon Parts", icon = 'PLUGIN')
+            col.label(text="Addon Parts", icon = 'PLUGIN')
             #row = row.row() #I want the button to be sticked to enum list. This way slightly separates. 
             #row.enabled = not pps.uiLayoutMembers.startswith('SEPA')
             row = col.row(align = True)
@@ -877,7 +877,7 @@ class AddSnippetPanel(bpy.types.Panel):
     
             layout.separator()
             col = layout.column(align = True)
-            col.label("Hint Snippets", icon = 'LAMP')
+            col.label(text="Hint Snippets", icon = 'OUTLINER_OB_LIGHT') 
             row = col.row(align = True)
             row.prop(pps, 'hintSnippets', text = "")
             if not pps.hintSnippets.startswith('SEPA'):
@@ -888,7 +888,7 @@ class AddSnippetPanel(bpy.types.Panel):
             layout.separator()
             col = layout.column(align = True)
             row = col.row(align = True)
-            row.label("UILayout Members", icon = 'SPLITSCREEN')
+            row.label(text="UILayout Members", icon = 'MENU_PANEL')
             row.prop(pps, "isAddUILayoutParams", text = "Include All Params")
             row = col.row(align = True)
             row.prop(pps, 'uiLayoutMembers', text="")
@@ -904,14 +904,14 @@ class AddSnippetPanel(bpy.types.Panel):
         # propvalue (used when km.is_modal is true) can't be filtered out the value. so, just hide it.
         row = layout.row(align = True)
         row.prop(pps, "isToolbarKeymapClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarKeymapClosed else "TRIA_DOWN")
-        row.label('Keymapping ' + '-' * (110 - len('Keymaping ')))
+        row.label(text='Keymapping ' + '-' * (110 - len('Keymaping ')))
         if not pps.isToolbarKeymapClosed:
-            split = layout.split(0.9)
+            split = layout.split(factor=0.9)
             colLeft = split.column()
             colButton = split.column()
             
             colLeft.prop(pps, "kmName", text = "")
-            colLeft.label("(%s, %s, Modal: %s)" % (pps.kmSpaceType, pps.kmRegionType, pps.kmIsModal))
+            colLeft.label(text="(%s, %s, Modal: %s)" % (pps.kmSpaceType, pps.kmRegionType, pps.kmIsModal))
             #if not pps.kmIsModal:
             #    layout.prop(pps, "kmiIdName", text = "idname")
             #else:
@@ -939,13 +939,13 @@ class AddSnippetPanel(bpy.types.Panel):
                     row.prop(pps, "kmiKeyMod", text = "Mod")
             
             # determine button position
-            colButton.label("")
-            colButton.label("")
+            colButton.label(text="")
+            colButton.label(text="")
             if pps.kmiMapType != 'TEXTINPUT':
-                colButton.label("")
+                colButton.label(text="")
                 if pps.kmiMapType != 'TIMER':
-                    colButton.label("")
-                    colButton.label("")
+                    colButton.label(text="")
+                    colButton.label(text="")
                     
             row = colButton.row()
             row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "Keymap"
@@ -1153,31 +1153,31 @@ def getKmiKeyMod(self, context):
 
 #-----
 class AddSnippetProps(bpy.types.PropertyGroup):
-    isClipboard = BoolProperty(name = "Copy to Clipboard instead of Insertion")
-    overallName = StringProperty(name = "Overall Name", description = "Used for class name of sample codes", default = "Hello World")
+    isClipboard: BoolProperty(name = "Copy to Clipboard instead of Insertion")
+    overallName: StringProperty(name = "Overall Name", description = "Used for class name of sample codes", default = "Hello World")
 
-    isAddRefComment = BoolProperty(name = "#Ref",         description = "Add reference line as comment", default = False)
-    isAddPrefix =     BoolProperty(name = "prefix",       description = "Add bpy.props at first",        default = True)
-    isAddName =       BoolProperty(name = "name",         description = "Add name",                      default = True)
-    isAddDesc =       BoolProperty(name = "desc",         description = "Add description",               default = True)
-    isAddDefault =    BoolProperty(name = "default",      description = "Add default",                   default = True)
-    isAddMinMax =     BoolProperty(name = "min,max",      description = "Add min and max (maxlen for String)", default = True)
-    isAddSoftMinMax = BoolProperty(name = "soft_min,max", description = "Add soft_min and soft_max",     default = False)
-    isAddStep =       BoolProperty(name = "step",         description = "Add step",                      default = False)
-    isAddSize =       BoolProperty(name = "size",         description = "Add size",                      default = False)
-    isAddUpdate =     BoolProperty(name = "update",       description = "Add update",                    default = False)
+    isAddRefComment: BoolProperty(name = "#Ref",         description = "Add reference line as comment", default = False)
+    isAddPrefix:     BoolProperty(name = "prefix",       description = "Add bpy.props at first",        default = True)
+    isAddName:       BoolProperty(name = "name",         description = "Add name",                      default = True)
+    isAddDesc:       BoolProperty(name = "desc",         description = "Add description",               default = True)
+    isAddDefault:    BoolProperty(name = "default",      description = "Add default",                   default = True)
+    isAddMinMax:     BoolProperty(name = "min,max",      description = "Add min and max (maxlen for String)", default = True)
+    isAddSoftMinMax: BoolProperty(name = "soft_min,max", description = "Add soft_min and soft_max",     default = False)
+    isAddStep:       BoolProperty(name = "step",         description = "Add step",                      default = False)
+    isAddSize:       BoolProperty(name = "size",         description = "Add size",                      default = False)
+    isAddUpdate:     BoolProperty(name = "update",       description = "Add update",                    default = False)
     
-    propOptions =    EnumProperty(items = getItems_propOptions,     name = "PropOptions",       description = "options of Property", options = {'ENUM_FLAG'})
-    propSubtype =    EnumProperty(items = getItems_propSubtype,     name = "PropSubtype",       description = "subtype of Property")
-    propVecSubtype = EnumProperty(items = getItems_propVecSubtype,  name = "PropVecSubtype",    description = "subtype of VectorProperty")
+    propOptions:    EnumProperty(items = getItems_propOptions,     name = "PropOptions",       description = "options of Property", options = {'ENUM_FLAG'})
+    propSubtype:    EnumProperty(items = getItems_propSubtype,     name = "PropSubtype",       description = "subtype of Property")
+    propVecSubtype: EnumProperty(items = getItems_propVecSubtype,  name = "PropVecSubtype",    description = "subtype of VectorProperty")
 
-    isAddFloatPrec = BoolProperty(name = "precision", description = "Add precision to FloatProperty",   default = False)
-    floatUnit =      EnumProperty(items = getItems_floatUnit,       name = "unit",    description = "unit of FloatProperty")
-    stringSubtype =  EnumProperty(items = getItems_stringSubtype,   name = "subtype",     description = "subtype of StringProperty")
-    isAddEnumFlag =  BoolProperty(name = "ENUM_FLAG", description = "Add ENUM_FLAG to options", default = False)
+    isAddFloatPrec: BoolProperty(name = "precision", description = "Add precision to FloatProperty",   default = False)
+    floatUnit:      EnumProperty(items = getItems_floatUnit,       name = "unit",    description = "unit of FloatProperty")
+    stringSubtype:  EnumProperty(items = getItems_stringSubtype,   name = "subtype",     description = "subtype of StringProperty")
+    isAddEnumFlag:  BoolProperty(name = "ENUM_FLAG", description = "Add ENUM_FLAG to options", default = False)
     
     #-----
-    panelSpace = EnumProperty(items = [('VIEW_3D',          '3D View',               '', 'VIEW3D',      0),
+    panelSpace: EnumProperty(items = [('VIEW_3D',          '3D View',               '', 'VIEW3D',      0),
                                        ('GRAPH_EDITOR',     'Graph Editor',          '', 'IPO',         1), 
                                        ('NLA_EDITOR',       'NLA Editor',            '', 'NLA',         2), 
                                        ('SEPARATOR1',       '-' * 40,                '', '',            3), 
@@ -1194,10 +1194,10 @@ class AddSnippetProps(bpy.types.PropertyGroup):
                               name = "Space",
                               description = "bl_space_type of Panel class")
     
-    panelRegion_view3d_clip = EnumProperty(items = [('TOOLS', 'TOOLS', ''), ('TOOL_PROPS', 'TOOL_PROPS', ''), ('UI', 'UI', '')] , name = "Region", description = "bl_region_type of Panel class")
-    panelRegion_image_node =       EnumProperty(items = [('TOOLS', 'TOOLS', ''), ('UI', 'UI', '')] , name = "Region", description = "bl_region_type of Panel class")
+    panelRegion_view3d_clip: EnumProperty(items = [('TOOLS', 'TOOLS', ''), ('TOOL_PROPS', 'TOOL_PROPS', ''), ('UI', 'UI', '')] , name = "Region", description = "bl_region_type of Panel class")
+    panelRegion_image_node: EnumProperty(items = [('TOOLS', 'TOOLS', ''), ('UI', 'UI', '')] , name = "Region", description = "bl_region_type of Panel class")
 
-    panelContext_view3d = EnumProperty(items = [('NO',             '-- none --',   '', '', 0),
+    panelContext_view3d: EnumProperty(items = [('NO',             '-- none --',   '', '', 0),
                                                 ('objectmode',     'Object Mode',  '', 'OBJECT_DATA', 1),
                                                 ('posemode',       'Pose Mode',    '', 'POSE_HLT', 2),
                                                 ('SEPARATOR',      '-' * 20,       '', '', 3),
@@ -1216,7 +1216,7 @@ class AddSnippetProps(bpy.types.PropertyGroup):
                                                 ('particlemode',  'Particle Mode', '', 'PARTICLEMODE', 16)],
                                         name = "Context", 
                                         description = "bl_context of Panel class")
-    panelContext_properties = EnumProperty(items = [('render',       'Render',      '', 'SCENE', 3),
+    panelContext_properties: EnumProperty(items = [('render',       'Render',      '', 'SCENE', 3),
                                                    ('render_layer', 'RenderLayer', '', 'RENDERLAYERS', 4),
                                                    ('scene',        'Scene',       '', 'SCENE_DATA', 5),
                                                    ('world',        'World',       '', 'WORLD_DATA', 6),
@@ -1231,12 +1231,12 @@ class AddSnippetProps(bpy.types.PropertyGroup):
                                         name = "Context", 
                                         description = "bl_context of Panel class")
 
-    panelCategory_objectmode =  EnumProperty(items = getPanelCategoryItems_objectmode, name = "Tab", description = "bl_category of Panel class")
-    panelCategory_editmode =    EnumProperty(items = getPanelCategoryItems_editmode,   name = "Tab", description = "bl_category of Panel class")
-    panelCategory_others =      EnumProperty(items = getPanelCategoryItems_others,     name = "Tab", description = "bl_category of Panel class")
-    panelCategory_imageeditor = EnumProperty(items = [('NO', '-- none --', ''), ('Tools', 'Tools', ''), ('Scopes', 'Scopes', ''), ('Grease Pencil', 'Grease Pencil', '')],     name = "Tab", description = "bl_category of Panel class")
+    panelCategory_objectmode:  EnumProperty(items = getPanelCategoryItems_objectmode, name = "Tab", description = "bl_category of Panel class")
+    panelCategory_editmode:    EnumProperty(items = getPanelCategoryItems_editmode,   name = "Tab", description = "bl_category of Panel class")
+    panelCategory_others:      EnumProperty(items = getPanelCategoryItems_others,     name = "Tab", description = "bl_category of Panel class")
+    panelCategory_imageeditor: EnumProperty(items = [('NO', '-- none --', ''), ('Tools', 'Tools', ''), ('Scopes', 'Scopes', ''), ('Grease Pencil', 'Grease Pencil', '')],     name = "Tab", description = "bl_category of Panel class")
     
-    addonParts = EnumProperty(items = [('OperatorClass',   'Operator Class', ''),
+    addonParts: EnumProperty(items = [('OperatorClass',   'Operator Class', ''),
                                        ('PanelClass',      'Panel Class', ''),
                                        ('MenuClass',       'Menu Class', ''),
                                        ('Props(Operator)', 'Properties (Operator)', ''),
@@ -1250,7 +1250,7 @@ class AddSnippetProps(bpy.types.PropertyGroup):
                                        ('GPL',             'GPL Block', '')],
                                  name = "Addon Parts")
 
-    hintSnippets = EnumProperty(items = [('Basic',                 'Basic', ''),
+    hintSnippets: EnumProperty(items = [('Basic',                 'Basic', ''),
                                          ('BasicForLoop',          'Basic For Loop', ''),
                                          ('DuplicateObject',       'Duplicate Object', ''),
                                          ('SEPARATOR',             '-' * 30, ''),
@@ -1271,35 +1271,35 @@ class AddSnippetProps(bpy.types.PropertyGroup):
                                          ('CreateTextBlock',       'Create TextBlock', '')],
                                  name = "Hint Snippets")
         
-    isAddUILayoutParams = BoolProperty(name = "Add All Parameters", description = "Includes all parameters if checked")
-    uiLayoutMembers = EnumProperty(items = getUILayoutMemberItems, name = "Members of UILayout", description = "Reminder purpose")
+    isAddUILayoutParams: BoolProperty(name = "Add All Parameters", description = "Includes all parameters if checked")
+    uiLayoutMembers: EnumProperty(items = getUILayoutMemberItems, name = "Members of UILayout", description = "Reminder purpose")
                                   
     #---- keymapping -------
-    kmName = EnumProperty(items = getKmName, name = "Keymap Name", update = update_kmName)
-    kmSpaceType = StringProperty(default = 'EMPTY') #set by update_kmName() to reduce overhead
-    kmRegionType = StringProperty(default = 'WINDOW') #set by update_kmName()
-    kmIsModal = BoolProperty(default = False) #set by update_kmName()
+    kmName: EnumProperty(items = getKmName, name = "Keymap Name", update = update_kmName)
+    kmSpaceType: StringProperty(default = 'EMPTY') #set by update_kmName() to reduce overhead
+    kmRegionType: StringProperty(default = 'WINDOW') #set by update_kmName()
+    kmIsModal: BoolProperty(default = False) #set by update_kmName()
     
     #kmiIdName = StringProperty()
     #kmiPropVal =  StringProperty()
-    kmiMapType =  EnumProperty(items = getKmiMapType, name = "KeymapItem MapType")
-    kmiType = EnumProperty(items = getKmiType, name = "KeymapItem Type")
-    kmiValue = EnumProperty(items = getKmiValue, name = "KeymapItem Value")
-    kmiKeyMod = EnumProperty(items = getKmiKeyMod, name = "KeymapItem KeyModifier")
+    kmiMapType:  EnumProperty(items = getKmiMapType, name = "KeymapItem MapType")
+    kmiType: EnumProperty(items = getKmiType, name = "KeymapItem Type")
+    kmiValue: EnumProperty(items = getKmiValue, name = "KeymapItem Value")
+    kmiKeyMod: EnumProperty(items = getKmiKeyMod, name = "KeymapItem KeyModifier")
     
-    isKmiAny =   BoolProperty(name = "Any",   set = set_kmiAny,   get = get_kmiAny) 
-    isKmiShift = BoolProperty(name = "Shift", set = set_kmiShift, get = get_kmiShift)
-    isKmiCtrl =  BoolProperty(name = "Ctrl",  set = set_kmiCtrl,  get = get_kmiCtrl)
-    isKmiAlt =   BoolProperty(name = "Alt",   set = set_kmiAlt,   get = get_kmiAlt)
-    isKmiOskey = BoolProperty(name = "Cmd",   set = set_kmiOskey, get = get_kmiOskey)
-    kmiKeysBit = IntProperty() #Any : 1, Shift : 2, Ctrl : 4, Alt : 8, Oskey : 16
-    isKmiCallMenu = BoolProperty(description = "Check if you want to use the keymap to pop up a menu")
+    isKmiAny:   BoolProperty(name = "Any",   set = set_kmiAny,   get = get_kmiAny) 
+    isKmiShift: BoolProperty(name = "Shift", set = set_kmiShift, get = get_kmiShift)
+    isKmiCtrl:  BoolProperty(name = "Ctrl",  set = set_kmiCtrl,  get = get_kmiCtrl)
+    isKmiAlt:   BoolProperty(name = "Alt",   set = set_kmiAlt,   get = get_kmiAlt)
+    isKmiOskey: BoolProperty(name = "Cmd",   set = set_kmiOskey, get = get_kmiOskey)
+    kmiKeysBit: IntProperty() #Any : 1, Shift : 2, Ctrl : 4, Alt : 8, Oskey : 16
+    isKmiCallMenu: BoolProperty(description = "Check if you want to use the keymap to pop up a menu")
     
     #------ Collapse toolbar ---------
-    isToolbarPropsClosed = BoolProperty()
-    isToolbarPanelPlaceClosed = BoolProperty(default = True)
-    isToolbarCodeSamplesClosed = BoolProperty(default = True)
-    isToolbarKeymapClosed = BoolProperty(default = True)
+    isToolbarPropsClosed: BoolProperty()
+    isToolbarPanelPlaceClosed: BoolProperty(default = True)
+    isToolbarCodeSamplesClosed: BoolProperty(default = True)
+    isToolbarKeymapClosed: BoolProperty(default = True)
     
     
 ####################################################################################        
