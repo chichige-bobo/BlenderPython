@@ -720,8 +720,14 @@ class AddSnippetOp_Samples(bpy.types.Operator):
         
 
 ####################################################################################
-class AddSnippetPanel(bpy.types.Panel):
-    """ToolTip of AddonTemplatePanel"""
+
+class GeneratorButtonsPanel:
+    bl_space_type = 'TEXT_EDITOR'
+    bl_region_type = 'UI'
+
+
+class AddSnippetPanel(GeneratorButtonsPanel, bpy.types.Panel):
+    """Addon Template Generator Panel"""
     bl_idname = "TEXTEDITOR_PT_add_snippet_panel"
     bl_label = "Generator"
     bl_category = "Generator"    
@@ -734,227 +740,256 @@ class AddSnippetPanel(bpy.types.Panel):
         
         layout.prop(pps, 'isClipboard')
         layout.prop(pps, 'overallName')
-        
-        row = layout.row(align = True)
-        row.prop(pps, "isToolbarPropsClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarPropsClosed else "TRIA_DOWN")
-        row.label(text='Properties ' + '-' * (110 - len('Properties ')))
-        if not pps.isToolbarPropsClosed:
-            row = layout.row(align = True)
-            row.operator(AddSnippetOp_Props.bl_idname, text = "ClearAll").type = "CHECK_CLEAR"
-            row.operator(AddSnippetOp_Props.bl_idname, text = "AddonDefault").type = "CHECK_DEFAULT"
-            row.operator(AddSnippetOp_Props.bl_idname, text = "SelectAll").type = "CHECK_ALL"
-            
-            col = layout.column(align = True)
-            box = col.box()
-            row = box.row()
-            row.prop(pps, 'isAddRefComment')
-            row.prop(pps, 'isAddPrefix')
-            row.prop(pps, 'isAddName')
-            row = box.row()
-            row.prop(pps, 'isAddDesc')
-            row.prop(pps, 'isAddDefault')
-            row.prop(pps, 'isAddUpdate')
-            
-            row = col.box().row()
-            row.prop(pps, 'isAddMinMax')
-            row.prop(pps, 'isAddSoftMinMax')
-            row.prop(pps, 'isAddStep')
-            row.prop(pps, 'isAddSize')
-            
-            box = col.box()
-            split = box.split(factor=0.18)
-            split.label(text='Options')   
-            row = split.row()
-            row.prop(pps, 'propOptions')
-            split = box.split(factor=0.18)
-            split.label(text='Subtype')   
-            row = split.row()
-            row.prop(pps, 'propSubtype', text="")
-            row.prop(pps, 'propVecSubtype', text="")
-            
-            #--------
-            split = layout.split()
-            row = split.row(align = True)
-            row.operator(AddSnippetOp_Props.bl_idname, text = "Bool").type = 'Bool'
-            row.operator(AddSnippetOp_Props.bl_idname, text = "BoolVec").type = 'BoolVector'
-            row = split.row(align = True)
-            row.operator(AddSnippetOp_Props.bl_idname, text = "Int").type = 'Int'
-            row.operator(AddSnippetOp_Props.bl_idname, text = "IntVec").type = 'IntVector'
-            row = layout.row(align = True)
-            row.prop(pps, 'isAddFloatPrec')     
-            row.prop(pps, 'floatUnit', text = "")
-            row.operator(AddSnippetOp_Props.bl_idname, text = "Float").type = 'Float'
-            row.operator(AddSnippetOp_Props.bl_idname, text = "FloatVec").type = 'FloatVector'
-            row = layout.row(align = True)
-            row.prop(pps, 'stringSubtype', text = "")
-            row.operator(AddSnippetOp_Props.bl_idname, text = "String").type = 'String'
-            split = layout.split(factor=0.5)
-            row = split.row(align = True)
-            row.prop(pps, 'isAddEnumFlag')
-            row.operator(AddSnippetOp_Props.bl_idname, text = "Enum").type = 'Enum'
-            split.operator(AddSnippetOp_Props.bl_idname, text = "Collection").type = 'Collection'
-            split.operator(AddSnippetOp_Props.bl_idname, text = "Pointer").type = 'Pointer'
-            layout.separator()
-        
-        # Panel Place ------
-        row = layout.row(align = True)
-        row.prop(pps, "isToolbarPanelPlaceClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarPanelPlaceClosed else "TRIA_DOWN")
-        row.label(text='Panel Place ' + '-' * (110 - len('Panel Place ')))
-        if not pps.isToolbarPanelPlaceClosed:
-            split = layout.split(factor=0.25)
-            colLabel = split.column()
-            subSplit = split.split(factor=0.85)
-            colCombo = subSplit.column()
-            colButton = subSplit.column()
-    
-            colLabel.label(text='Space:')
-            colCombo.prop(pps, "panelSpace", text = '')
-            colButton.label(text='')
-            
-            colLabel.label(text='Region:')
-            if pps.panelSpace.startswith('SEPA'):
-                colCombo.label(text='')
-            else:
-                if pps.panelSpace == 'VIEW_3D' or pps.panelSpace == 'CLIP_EDITOR':
-                    colCombo.prop(pps, "panelRegion_view3d_clip", text = "")
-                elif pps.panelSpace == 'PROPERTIES' or pps.panelSpace == 'USER_PREFERENCES':
-                    colCombo.label(text="WINDOW")
-                elif pps.panelSpace == 'FILE_BROWSER':
-                    colCombo.label(text="CHANNELS")
-                elif pps.panelSpace == 'IMAGE_EDITOR' or pps.panelSpace == 'NODE_EDITOR':
-                    colCombo.prop(pps, "panelRegion_image_node", text = "")
-                else:
-                    colCombo.label(text="UI")
-    
-                if pps.panelSpace == 'VIEW_3D':
-                    colLabel.label(text="Context:")
-                    colCombo.prop(pps, "panelContext_view3d", text = "")
-                    if pps.panelRegion_view3d_clip == 'TOOLS':
-                        colLabel.label(text="Tab:")
-                        if pps.panelContext_view3d == 'objectmode':
-                            colCombo.prop(pps, "panelCategory_objectmode", text = "")
-                        elif pps.panelContext_view3d == 'mesh_edit':
-                            colCombo.prop(pps, "panelCategory_editmode", text = "")
-                        else:
-                            colCombo.prop(pps, "panelCategory_others", text = "")                        
-                
-                elif pps.panelSpace == 'PROPERTIES':
-                    colLabel.label(text="Context:")
-                    colCombo.prop(pps, "panelContext_properties", text = "")
-                
-                elif pps.panelSpace == 'IMAGE_EDITOR' and pps.panelRegion_image_node == 'TOOLS':
-                    colLabel.label(text="Tab:")
-                    colCombo.prop(pps, "panelCategory_imageeditor", text = "")
-                
-            # determine button position
-            if pps.panelSpace == 'VIEW_3D':
-                colButton.label(text='') #region row
-                if pps.panelRegion_view3d_clip == 'TOOLS':
-                    colButton.label(text='')
-            elif pps.panelSpace == 'PROPERTIES' or (pps.panelSpace == 'IMAGE_EDITOR' and pps.panelRegion_image_node == 'TOOLS'):
-                colButton.label(text='') #region row
-    
-            row = colButton.row() 
-            row.enabled = not pps.panelSpace.startswith('SEPA')
-            row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "PanelPlace"
-            layout.separator()
-            
-        # CodeSamples-----------
-        row = layout.row(align = True)
-        row.prop(pps, "isToolbarCodeSamplesClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarCodeSamplesClosed else "TRIA_DOWN")
-        row.label(text='Code Samples ' + '-' * (110 - len('Code Samples ')))
-        if not pps.isToolbarCodeSamplesClosed:
-            col = layout.column(align = True)
-            col.label(text="Addon Parts", icon = 'PLUGIN')
-            #row = row.row() #I want the button to be sticked to enum list. This way slightly separates. 
-            #row.enabled = not pps.uiLayoutMembers.startswith('SEPA')
-            row = col.row(align = True)
-            row.prop(pps, 'addonParts', text="")            
-            if not pps.addonParts.startswith('SEPA'):
-                row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "AddonParts"
-            else:
-                row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
-    
-            layout.separator()
-            col = layout.column(align = True)
-            col.label(text="Hint Snippets", icon = 'OUTLINER_OB_LIGHT') 
-            row = col.row(align = True)
-            row.prop(pps, 'hintSnippets', text = "")
-            if not pps.hintSnippets.startswith('SEPA'):
-                row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "HintSnippets"
-            else:
-                row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
-            
-            layout.separator()
-            col = layout.column(align = True)
-            row = col.row(align = True)
-            row.label(text="UILayout Members", icon = 'MENU_PANEL')
-            row.prop(pps, "isAddUILayoutParams", text = "Include All Params")
-            row = col.row(align = True)
-            row.prop(pps, 'uiLayoutMembers', text="")
-            if not pps.uiLayoutMembers.startswith('SEPA'):
-                row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "UILayoutMembers"
-            else:
-                row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
-            
-            layout.separator()
 
-        # Keymapping ------
+
+class TEXT_PT_generator_properties(GeneratorButtonsPanel, bpy.types.Panel):
+    bl_parent_id = "TEXTEDITOR_PT_add_snippet_panel"
+    bl_label = "Properties"
+    bl_options = {'DEFAULT_CLOSED'}
+    bl_space_type = 'TEXT_EDITOR'   
+
+    
+    def draw(self, context):
+        layout = self.layout
+        pps = context.scene.chichige_add_snippet_props        
+        row = layout.row(align = True)
+        row.operator(AddSnippetOp_Props.bl_idname, text = "ClearAll").type = "CHECK_CLEAR"
+        row.operator(AddSnippetOp_Props.bl_idname, text = "AddonDefault").type = "CHECK_DEFAULT"
+        row.operator(AddSnippetOp_Props.bl_idname, text = "SelectAll").type = "CHECK_ALL"
+        
+        col = layout.column(align = True)
+        box = col.box()
+        row = box.row()
+        row.prop(pps, 'isAddRefComment')
+        row.prop(pps, 'isAddPrefix')
+        row.prop(pps, 'isAddName')
+        row = box.row()
+        row.prop(pps, 'isAddDesc')
+        row.prop(pps, 'isAddDefault')
+        row.prop(pps, 'isAddUpdate')
+        
+        row = col.box().row()
+        row.prop(pps, 'isAddMinMax')
+        row.prop(pps, 'isAddSoftMinMax')
+        row.prop(pps, 'isAddStep')
+        row.prop(pps, 'isAddSize')
+        
+        box = col.box()
+        split = box.split(factor=0.18)
+        split.label(text='Options')   
+        row = split.row()
+        row.prop(pps, 'propOptions')
+        split = box.split(factor=0.18)
+        split.label(text='Subtype')   
+        row = split.row()
+        row.prop(pps, 'propSubtype', text="")
+        row.prop(pps, 'propVecSubtype', text="")
+        
+        #--------
+        split = layout.split()
+        row = split.row(align = True)
+        row.operator(AddSnippetOp_Props.bl_idname, text = "Bool").type = 'Bool'
+        row.operator(AddSnippetOp_Props.bl_idname, text = "BoolVec").type = 'BoolVector'
+        row = split.row(align = True)
+        row.operator(AddSnippetOp_Props.bl_idname, text = "Int").type = 'Int'
+        row.operator(AddSnippetOp_Props.bl_idname, text = "IntVec").type = 'IntVector'
+        row = layout.row(align = True)
+        row.prop(pps, 'isAddFloatPrec')     
+        row.prop(pps, 'floatUnit', text = "")
+        row.operator(AddSnippetOp_Props.bl_idname, text = "Float").type = 'Float'
+        row.operator(AddSnippetOp_Props.bl_idname, text = "FloatVec").type = 'FloatVector'
+        row = layout.row(align = True)
+        row.prop(pps, 'stringSubtype', text = "")
+        row.operator(AddSnippetOp_Props.bl_idname, text = "String").type = 'String'
+        split = layout.split(factor=0.5)
+        row = split.row(align = True)
+        row.prop(pps, 'isAddEnumFlag')
+        row.operator(AddSnippetOp_Props.bl_idname, text = "Enum").type = 'Enum'
+        split.operator(AddSnippetOp_Props.bl_idname, text = "Collection").type = 'Collection'
+        split.operator(AddSnippetOp_Props.bl_idname, text = "Pointer").type = 'Pointer'
+        layout.separator()
+
+
+class TEXT_PT_generator_panel_place(GeneratorButtonsPanel, bpy.types.Panel):
+    bl_parent_id = "TEXTEDITOR_PT_add_snippet_panel"
+    bl_label = "Panel Place"
+    bl_options = {'DEFAULT_CLOSED'}
+    bl_space_type = 'TEXT_EDITOR'  
+    
+    def draw(self, context):
+        layout = self.layout
+        pps = context.scene.chichige_add_snippet_props 
+           
+        row = layout.row(align = True)
+        split = layout.split(factor=0.25)
+        colLabel = split.column()
+        subSplit = split.split(factor=0.85)
+        colCombo = subSplit.column()
+        colButton = subSplit.column()
+
+        colLabel.label(text='Space:')
+        colCombo.prop(pps, "panelSpace", text = '')
+        colButton.label(text='')
+        
+        colLabel.label(text='Region:')
+        if pps.panelSpace.startswith('SEPA'):
+            colCombo.label(text='')
+        else:
+            if pps.panelSpace == 'VIEW_3D' or pps.panelSpace == 'CLIP_EDITOR':
+                colCombo.prop(pps, "panelRegion_view3d_clip", text = "")
+            elif pps.panelSpace == 'PROPERTIES' or pps.panelSpace == 'USER_PREFERENCES':
+                colCombo.label(text="WINDOW")
+            elif pps.panelSpace == 'FILE_BROWSER':
+                colCombo.label(text="CHANNELS")
+            elif pps.panelSpace == 'IMAGE_EDITOR' or pps.panelSpace == 'NODE_EDITOR':
+                colCombo.prop(pps, "panelRegion_image_node", text = "")
+            else:
+                colCombo.label(text="UI")
+
+            if pps.panelSpace == 'VIEW_3D':
+                colLabel.label(text="Context:")
+                colCombo.prop(pps, "panelContext_view3d", text = "")
+                if pps.panelRegion_view3d_clip == 'TOOLS':
+                    colLabel.label(text="Tab:")
+                    if pps.panelContext_view3d == 'objectmode':
+                        colCombo.prop(pps, "panelCategory_objectmode", text = "")
+                    elif pps.panelContext_view3d == 'mesh_edit':
+                        colCombo.prop(pps, "panelCategory_editmode", text = "")
+                    else:
+                        colCombo.prop(pps, "panelCategory_others", text = "")                        
+            
+            elif pps.panelSpace == 'PROPERTIES':
+                colLabel.label(text="Context:")
+                colCombo.prop(pps, "panelContext_properties", text = "")
+            
+            elif pps.panelSpace == 'IMAGE_EDITOR' and pps.panelRegion_image_node == 'TOOLS':
+                colLabel.label(text="Tab:")
+                colCombo.prop(pps, "panelCategory_imageeditor", text = "")
+            
+        # determine button position
+        if pps.panelSpace == 'VIEW_3D':
+            colButton.label(text='') #region row
+            if pps.panelRegion_view3d_clip == 'TOOLS':
+                colButton.label(text='')
+        elif pps.panelSpace == 'PROPERTIES' or (pps.panelSpace == 'IMAGE_EDITOR' and pps.panelRegion_image_node == 'TOOLS'):
+            colButton.label(text='') #region row
+
+        row = colButton.row() 
+        row.enabled = not pps.panelSpace.startswith('SEPA')
+        row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "PanelPlace"
+        layout.separator()
+        
+
+class TEXT_PT_generator_code_samples(GeneratorButtonsPanel, bpy.types.Panel):
+    bl_parent_id = "TEXTEDITOR_PT_add_snippet_panel"
+    bl_label = "Code Samples"
+    bl_options = {'DEFAULT_CLOSED'}
+    bl_space_type = 'TEXT_EDITOR'  
+    
+    def draw(self, context):
+        layout = self.layout
+        pps = context.scene.chichige_add_snippet_props 
+        row = layout.row(align = True)
+        col = layout.column(align = True)
+        col.label(text="Addon Parts", icon = 'PLUGIN')
+        #row = row.row() #I want the button to be sticked to enum list. This way slightly separates. 
+        #row.enabled = not pps.uiLayoutMembers.startswith('SEPA')
+        row = col.row(align = True)
+        row.prop(pps, 'addonParts', text="")            
+        if not pps.addonParts.startswith('SEPA'):
+            row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "AddonParts"
+        else:
+            row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
+
+        layout.separator()
+        col = layout.column(align = True)
+        col.label(text="Hint Snippets", icon = 'OUTLINER_OB_LIGHT') 
+        row = col.row(align = True)
+        row.prop(pps, 'hintSnippets', text = "")
+        if not pps.hintSnippets.startswith('SEPA'):
+            row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "HintSnippets"
+        else:
+            row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
+        
+        layout.separator()
+        col = layout.column(align = True)
+        row = col.row(align = True)
+        row.label(text="UILayout Members", icon = 'MENU_PANEL')
+        row.prop(pps, "isAddUILayoutParams", text = "Include All Params")
+        row = col.row(align = True)
+        row.prop(pps, 'uiLayoutMembers', text="")
+        if not pps.uiLayoutMembers.startswith('SEPA'):
+            row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "UILayoutMembers"
+        else:
+            row.operator(AddSnippetOp_Samples.bl_idname, text="", icon ="LIBRARY_DATA_INDIRECT").type = "INEFFECTIVE"
+        
+        layout.separator()
+
+
+class TEXT_PT_generator_keymapping(GeneratorButtonsPanel, bpy.types.Panel):
+    bl_parent_id = "TEXTEDITOR_PT_add_snippet_panel"
+    bl_label = "Keymapping"
+    bl_options = {'DEFAULT_CLOSED'}
+    bl_space_type = 'TEXT_EDITOR'  
+    
+    def draw(self, context):
+        layout = self.layout
+        pps = context.scene.chichige_add_snippet_props 
         # prop(full_event = True) not worked despite effort with various EnumProperty settings.
         # propvalue (used when km.is_modal is true) can't be filtered out the value. so, just hide it.
         row = layout.row(align = True)
-        row.prop(pps, "isToolbarKeymapClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarKeymapClosed else "TRIA_DOWN")
-        row.label(text='Keymapping ' + '-' * (110 - len('Keymaping ')))
-        if not pps.isToolbarKeymapClosed:
-            split = layout.split(factor=0.9)
-            colLeft = split.column()
-            colButton = split.column()
-            
-            colLeft.prop(pps, "kmName", text = "")
-            colLeft.label(text="(%s, %s, Modal: %s)" % (pps.kmSpaceType, pps.kmRegionType, pps.kmIsModal))
-            #if not pps.kmIsModal:
-            #    layout.prop(pps, "kmiIdName", text = "idname")
-            #else:
-            #    layout.prop(pps, "kmiPropVal", text = "PropVal")
-            colLeft.prop(pps, "kmiMapType", text = "MapType")
-            if pps.kmiMapType != 'TEXTINPUT':
-                if pps.kmiMapType == 'TIMER':
-                    colLeft.prop(pps, "kmiType", text = "Type")
-                else:
-                    row = colLeft.row(align = True)
-                    row.prop(pps, "kmiType", text = "")
-                    row.prop(pps, "kmiValue", text = "")
-                    
-                    row = colLeft.row(align = True)
-                    row.prop(pps, "isKmiAny")                
-                    row.prop(pps, "isKmiShift")                
-                    row.prop(pps, "isKmiCtrl")                
-                    row.prop(pps, "isKmiAlt")                
-                    row.prop(pps, "isKmiOskey")
-                    
-                    row = colLeft.row()
-                    subRow = row.row()
-                    subRow.enabled = not pps.kmIsModal
-                    subRow.prop(pps, "isKmiCallMenu", text="(Call Menu)")            
-                    row.prop(pps, "kmiKeyMod", text = "Mod")
-            
-            # determine button position
-            colButton.label(text="")
-            colButton.label(text="")
-            if pps.kmiMapType != 'TEXTINPUT':
-                colButton.label(text="")
-                if pps.kmiMapType != 'TIMER':
-                    colButton.label(text="")
-                    colButton.label(text="")
-                    
-            row = colButton.row()
-            row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "Keymap"
-            
-            colLeft.separator()
-            colLeft.operator(AddSnippetOp_Samples.bl_idname, text="Check Confilicts to Console").type = 'CheckKeymapConflicts'
-            
-            layout.separator()
+#        row.prop(pps, "isToolbarKeymapClosed", text = "", emboss = False, icon = "TRIA_RIGHT" if pps.isToolbarKeymapClosed else "TRIA_DOWN")
+#        row.label(text='Keymapping ' + '-' * (110 - len('Keymaping ')))
+#        if not pps.isToolbarKeymapClosed:
+        split = layout.split(factor=0.9)
+        colLeft = split.column()
+        colButton = split.column()
+        
+        colLeft.prop(pps, "kmName", text = "")
+        colLeft.label(text="(%s, %s, Modal: %s)" % (pps.kmSpaceType, pps.kmRegionType, pps.kmIsModal))
+        #if not pps.kmIsModal:
+        #    layout.prop(pps, "kmiIdName", text = "idname")
+        #else:
+        #    layout.prop(pps, "kmiPropVal", text = "PropVal")
+        colLeft.prop(pps, "kmiMapType", text = "MapType")
+        if pps.kmiMapType != 'TEXTINPUT':
+            if pps.kmiMapType == 'TIMER':
+                colLeft.prop(pps, "kmiType", text = "Type")
+            else:
+                row = colLeft.row(align = True)
+                row.prop(pps, "kmiType", text = "")
+                row.prop(pps, "kmiValue", text = "")
                 
+                row = colLeft.row(align = True)
+                row.prop(pps, "isKmiAny")                
+                row.prop(pps, "isKmiShift")                
+                row.prop(pps, "isKmiCtrl")                
+                row.prop(pps, "isKmiAlt")                
+                row.prop(pps, "isKmiOskey")
+                
+                row = colLeft.row()
+                subRow = row.row()
+                subRow.enabled = not pps.kmIsModal
+                subRow.prop(pps, "isKmiCallMenu", text="(Call Menu)")            
+                row.prop(pps, "kmiKeyMod", text = "Mod")
+        
+        # determine button position
+        colButton.label(text="")
+        colButton.label(text="")
+        if pps.kmiMapType != 'TEXTINPUT':
+            colButton.label(text="")
+            if pps.kmiMapType != 'TIMER':
+                colButton.label(text="")
+                colButton.label(text="")
+                
+        row = colButton.row()
+        row.operator(AddSnippetOp_Samples.bl_idname, text = "", icon="COPYDOWN" if pps.isClipboard else "FORWARD").type = "Keymap"
+        
+        colLeft.separator()
+        colLeft.operator(AddSnippetOp_Samples.bl_idname, text="Check Confilicts to Console").type = 'CheckKeymapConflicts'
+        
+        layout.separator()
+            
             
 ####################################################################################
 # Scene item funcs, props ----
@@ -1311,17 +1346,23 @@ def menu_func(self, context):
 def register():
     bpy.utils.register_class(AddSnippetProps)
     bpy.types.Scene.chichige_add_snippet_props = PointerProperty(type = AddSnippetProps)
-
+    bpy.utils.register_class(AddSnippetPanel) 
+    bpy.utils.register_class(TEXT_PT_generator_properties)
+    bpy.utils.register_class(TEXT_PT_generator_panel_place)
+    bpy.utils.register_class(TEXT_PT_generator_code_samples)
+    bpy.utils.register_class(TEXT_PT_generator_keymapping)
     bpy.utils.register_class(AddonTemplateGeneratorOp)
     bpy.utils.register_class(AddSnippetOp_Props)
     bpy.utils.register_class(AddSnippetOp_Samples)
-    bpy.utils.register_class(AddSnippetPanel)
     bpy.types.TEXT_MT_templates.append(menu_func)
 
 def unregister():
     bpy.utils.unregister_class(AddSnippetProps)
     #del bpy.types.Scene.chichige_add_snippet_props
-
+    bpy.utils.unregister_class(TEXT_PT_generator_properties)
+    bpy.utils.unregister_class(TEXT_PT_generator_panel_place)
+    bpy.utils.register_class(TEXT_PT_generator_code_samples)
+    bpy.utils.register_class(TEXT_PT_generator_keymapping)
     bpy.utils.unregister_class(AddonTemplateGeneratorOp)
     bpy.utils.unregister_class(AddSnippetOp_Props)
     bpy.utils.unregister_class(AddSnippetOp_Samples)
@@ -1375,14 +1416,14 @@ bl_info = {
 
 """
 txt_props = """\
-    my_bool =     BoolProperty(name="", description="", default=False)
-    my_boolVec =  BoolVectorProperty(name="", description="", default=(False, False, False))
-    my_float =    FloatProperty(name="", description="", default=0.0)
-    my_floatVec = FloatVectorProperty(name="", description="", default=(0.0, 0.0, 0.0)) 
-    my_int =      IntProperty(name="", description="", default=0)  
-    my_intVec =   IntVectorProperty(name="", description="", default=(0, 0, 0))
-    my_string =   StringProperty(name="String Value", description="", default="", maxlen=0)
-    my_enum =     EnumProperty(items = [('ENUM1', 'Enum1', 'enum prop 1'), 
+    my_bool:     BoolProperty(name="", description="", default=False)
+    my_boolVec:  BoolVectorProperty(name="", description="", default=(False, False, False))
+    my_float:    FloatProperty(name="", description="", default=0.0)
+    my_floatVec: FloatVectorProperty(name="", description="", default=(0.0, 0.0, 0.0)) 
+    my_int:      IntProperty(name="", description="", default=0)  
+    my_intVec:   IntVectorProperty(name="", description="", default=(0, 0, 0))
+    my_string:   StringProperty(name="String Value", description="", default="", maxlen=0)
+    my_enum:     EnumProperty(items = [('ENUM1', 'Enum1', 'enum prop 1'), 
                                         ('ENUM2', 'Enum2', 'enum prop 2')],
                                name="",
                                description="",
@@ -1518,7 +1559,7 @@ txt_hint_Basic = """\
         print(context.scene.cursor_location)
         print(context.scene.frame_current)
         
-        #CYCLES, BLENDER_RENDER, BLENDER_GAME
+        #CYCLES, BLENDER_RENDER
         print(context.scene.render.engine) 
         
         #MESH, CURVE, SURFACE, META, FONT, ARMATURE, LATTICE, EMPTY, CAMERA, LAMP, SPEAKER
