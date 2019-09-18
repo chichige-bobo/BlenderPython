@@ -42,8 +42,8 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
     # name for label, desc for tooltip in Operator Panel
     # options = Enumerator in ['HIDDEN', 'SKIP_SAVE', 'ANIMATABLE', 'LIBRARY_EDITABLE'] (and 'ENUM_FLAG' for EnumProp)
     
-    p_name = StringProperty(name = "Overall Name", description="Used for various places", default="Hello World")
-    p_opOptions = EnumProperty(items = [('REGISTER', 'Register', 'Display in the info window and support the redo toolbar panel.'), 
+    p_name: StringProperty(name = "Overall Name", description="Used for various places", default="Hello World")
+    p_opOptions: EnumProperty(items = [('REGISTER', 'Register', 'Display in the info window and support the redo toolbar panel.'), 
                                         ('UNDO',     'Undo', 'Push an undo event (needed for operator redo)'),
                                         ('BLOCKING', 'Blocking', 'Block anything else from using the cursor'),
                                         ('MACRO',    'Macro', 'Use to check if an operator is a macro'),
@@ -1212,20 +1212,20 @@ class AddSnippetProps(bpy.types.PropertyGroup):
     isAddEnumFlag:  BoolProperty(name = "ENUM_FLAG", description = "Add ENUM_FLAG to options", default = False)
     
     #-----
-    panelSpace: EnumProperty(items = [('VIEW_3D',          '3D View',               '', 'VIEW3D',      0),
-                                       ('GRAPH_EDITOR',     'Graph Editor',          '', 'IPO',         1), 
+    panelSpace: EnumProperty(items = [('VIEW_3D',          '3D View',               '', 'VIEW3D',       0),
+                                       ('GRAPH_EDITOR',     'Graph Editor',          '', 'GRAPH',       1), 
                                        ('NLA_EDITOR',       'NLA Editor',            '', 'NLA',         2), 
                                        ('SEPARATOR1',       '-' * 40,                '', '',            3), 
-                                       ('IMAGE_EDITOR',     'UV/Image Editor',       '', 'IMAGE_COL',   4), 
+                                       ('IMAGE_EDITOR',     'UV/Image Editor',       '', 'IMAGE',       4), 
                                        ('SEQUENCE_EDITOR',  'Video Sequence Editor', '', 'SEQUENCE',    5), 
-                                       ('CLIP_EDITOR',      'Movie Clip Editor',     '', 'CLIP',        6), 
+                                       ('CLIP_EDITOR',      'Movie Clip Editor',     '', 'TRACKER',     6), 
                                        ('TEXT_EDITOR',      'Text Editor',           '', 'TEXT',        7), 
                                        ('NODE_EDITOR',      'Node Editor',           '', 'NODETREE',    8), 
                                        ('LOGIC_EDITOR',     'Logic Editor',          '', 'LOGIC',       9), 
                                        ('SEPARATOR2',       '-' * 40,                '', '',            10), 
-                                       ('PROPERTIES',       'Properties',            '', 'BUTS',        11), 
+                                       ('PROPERTIES',       'Properties',            '', 'PROPERTIES',  11), 
                                        ('USER_PREFERENCES', 'User Preferences',      '', 'PREFERENCES', 12), 
-                                       ('FILE_BROWSER',     'File Browser',          '', 'FILESEL',     13)],
+                                       ('FILE_BROWSER',     'File Browser',          '', 'FILEBROWSER', 13)],
                               name = "Space",
                               description = "bl_space_type of Panel class")
     
