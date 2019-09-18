@@ -723,8 +723,8 @@ class AddSnippetOp_Samples(bpy.types.Operator):
 class AddSnippetPanel(bpy.types.Panel):
     """ToolTip of AddonTemplatePanel"""
     bl_idname = "TEXTEDITOR_PT_add_snippet_panel"
-    bl_label = "Add Snippets"
-    
+    bl_label = "Generator"
+    bl_category = "Generator"    
     bl_space_type = 'TEXT_EDITOR'
     bl_region_type = 'UI'
     
@@ -763,11 +763,11 @@ class AddSnippetPanel(bpy.types.Panel):
             
             box = col.box()
             split = box.split(factor=0.18)
-            split.label(text='options')   
+            split.label(text='Options')   
             row = split.row()
             row.prop(pps, 'propOptions')
             split = box.split(factor=0.18)
-            split.label(text='subtype')   
+            split.label(text='Subtype')   
             row = split.row()
             row.prop(pps, 'propSubtype', text="")
             row.prop(pps, 'propVecSubtype', text="")
@@ -1305,7 +1305,7 @@ class AddSnippetProps(bpy.types.PropertyGroup):
 ####################################################################################        
 
 def menu_func(self, context):
-    self.layout.operator(AddonTemplateGeneratorOp.bl_idname, icon = 'PLUGIN')
+    self.layout.operator(AddonTemplateGeneratorOp.bl_idname)
 
 # Registration---_------------------------------------------
 def register():
