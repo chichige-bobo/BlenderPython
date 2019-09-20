@@ -350,21 +350,21 @@ class AddSnippetOp_Props(bpy.types.Operator):
         if self.type == "CHECK_CLEAR":
             pps.isAddRefComment = pps.isAddPrefix = pps.isAddName = pps.isAddDesc = pps.isAddDefault = False
             pps.isAddMinMax = pps.isAddSoftMinMax = pps.isAddStep = pps.isAddSize = pps.isAddUpdate = False
-            #pps.propOptions = set()# I don't know if this is correct way
+            pps.propOptions = set()# I don't know if this is correct way
             pps.propSubtype =  pps.propVecSubtype = pps.floatUnit = pps.stringSubtype =  'NO'
             pps.isAddFloatPrec = pps.isAddEnumFlag = False
 
         elif self.type == "CHECK_DEFAULT":
             pps.isAddPrefix = pps.isAddName = pps.isAddDesc = pps.isAddDefault = pps.isAddMinMax = True
             pps.isAddRefComment = pps.isAddSoftMinMax = pps.isAddStep = pps.isAddSize = pps.isAddUpdate = False
-            #pps.propOptions = set()
+            pps.propOptions = set()
             pps.propSubtype =  pps.propVecSubtype = pps.floatUnit = pps.stringSubtype =  'NO'
             pps.isAddFloatPrec = pps.isAddEnumFlag = False
 
         elif self.type == "CHECK_ALL":
             pps.isAddRefComment = pps.isAddPrefix = pps.isAddName = pps.isAddDesc = pps.isAddDefault = True
             pps.isAddMinMax = pps.isAddSoftMinMax = pps.isAddStep = pps.isAddSize = pps.isAddUpdate = True
-            #pps.propOptions = {'ANIMATABLE'}
+            pps.propOptions = {'ANIMATABLE'}
             pps.propSubtype =  pps.propVecSubtype = pps.floatUnit = pps.stringSubtype =  'NONE'
             pps.isAddFloatPrec = pps.isAddEnumFlag = True
 
@@ -730,13 +730,13 @@ class TEXT_PT_generator_properties(GeneratorButtonsPanel, bpy.types.Panel):
         layout.use_property_split = True
         layout.use_property_decorate = False
         pps = context.scene.chichige_add_snippet_props
-        row = layout.row(align = True)
-        row.operator(AddSnippetOp_Props.bl_idname, text = "Clear All").type = "CHECK_CLEAR"
-        row.operator(AddSnippetOp_Props.bl_idname, text = "Default").type = "CHECK_DEFAULT"
-        row.operator(AddSnippetOp_Props.bl_idname, text = "Select All").type = "CHECK_ALL"
 
         col = layout.column(align = True)
         box = col.box()
+        row = box.row(align = True)
+        row.operator(AddSnippetOp_Props.bl_idname, text = "Clear All").type = "CHECK_CLEAR"
+        row.operator(AddSnippetOp_Props.bl_idname, text = "Default").type = "CHECK_DEFAULT"
+        row.operator(AddSnippetOp_Props.bl_idname, text = "Select All").type = "CHECK_ALL"
         row = box.row()
         row.prop(pps, 'isAddRefComment')
         row.prop(pps, 'isAddPrefix')
@@ -781,7 +781,6 @@ class TEXT_PT_generator_properties(GeneratorButtonsPanel, bpy.types.Panel):
         row.operator(AddSnippetOp_Props.bl_idname, text = "String", icon="COPYDOWN" if pps.isClipboard else "PASTEDOWN").type = 'String'
         row.prop(pps, 'stringSubtype', text = "")
         layout.separator()
-        #split = layout.split(factor=0.5)
         row = layout.row(align = True)
         row.operator(AddSnippetOp_Props.bl_idname, text = "Enum", icon="COPYDOWN" if pps.isClipboard else "PASTEDOWN").type = 'Enum'
         row.prop(pps, 'isAddEnumFlag')
