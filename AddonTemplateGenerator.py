@@ -55,7 +55,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
                               default={'REGISTER'},
                               options = {'ENUM_FLAG'})
 
-    isUseOpProps: BoolProperty(name='Add Operator Properties', description = "Add a set of properties for this operator", default = False )
+    isUseOpProps: BoolProperty(name='Add Properties', description = "Add a set of properties for this operator", default = False )
 
     isUsePanel: BoolProperty(name='Add Panel Class', description = "Whether use Panel class.", default = True)
     p_panelOptions: EnumProperty(items = [('DEFAULT_CLOSED', 'Default Closed', 'Defines if the panel has to be open or collapsed at the time of its creation'),
@@ -69,7 +69,7 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
                                       name="SpaceRegionType",
                                       description="Panel's bl_space_type, bl_region_type and bl_context")
 
-    isUseMenu: BoolProperty(name='Add Menu Class', description = "Whether use Menu class.", default = False)
+    isUseMenu: BoolProperty(name='Add Menu', description = "Whether use Menu class.", default = False)
 
     isUseGPLNotice:  BoolProperty(name = 'Add GPL Notification', default = False)
     isUseSceneProps: BoolProperty(name = 'Add Scene Properties', default = False )
@@ -193,50 +193,47 @@ class AddonTemplateGeneratorOp(bpy.types.Operator):
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self, width = 250, height=500) # returns {'RUNNING_MODAL'} and calls execute() when 'OK' button is pressed
+        return context.window_manager.invoke_props_dialog(self, width = 200, height=500) # returns {'RUNNING_MODAL'} and calls execute() when 'OK' button is pressed
 
     #= AddonTempGen draw =================
     def draw(self, context):
         layout = self.layout
         layout.use_property_split = True
         layout.use_property_decorate = False
-        row = layout.row()
-        row.alignment = 'CENTER'
-        #row.label(text='(Some options can be multi-selected with Shift-Click)')
 
         layout.separator()
         layout.prop(self, 'p_name')
-        #row = layout.row(align = True)
-        #row.alignment = 'CENTER'
-#        col = row.column(align = True)
-#        col.label(text="            When above name is 'Hello World'...")
-#        col.label(text="                ClassName = 'HellowWorldOperator'")
-#        col.label(text="                bl_idname = 'addongen.hello_world_operator'")
-        layout = layout.column(align = True)
-        layout.label(text='Operator ')
-        layout.prop(self, 'p_opOptions', text="Options")
-        layout.prop(self, 'isUseOpProps')
 
-        layout.separator()
-        layout.label(text='Panel ')
-        layout.prop(self, 'isUsePanel', text="Add Panel")
-        col = layout.column()
+        col = layout.column(align = True)
+        col = col.box()
+        col.label(text='Operator ')
+        col.prop(self, 'p_opOptions', text="Options")
+        col.prop(self, 'isUseOpProps')
+
+        col = layout.column(align = True)
+        col = col.box()
+        col.use_property_split = False
+        col.prop(self, 'isUsePanel', text="Panel")
+        subcol = col.column()
+        subcol.use_property_split = True
         if not self.isUsePanel:
-            col.active = False
-        #row = flow.row(align=True)
-        col.prop(self, 'p_panelSpaceRegion', text = 'Region')
-        col.prop(self, 'p_panelOptions', text="Panel Options")
+            subcol.active = False
+        subcol.prop(self, 'p_panelSpaceRegion', text = '')
+        subcol.separator()
+        subcol.prop(self, 'p_panelOptions', text="Options")
 
-        layout.separator()
-        layout.label(text='Menu ')
-        layout.prop(self, 'isUseMenu')
+        col = layout.column(align = True)
+        col = col.box()
+        col.use_property_split = False
+        col.prop(self, 'isUseMenu', text="Menu")
 
-        layout.separator()
-        layout.label(text='Misc ')
-        layout.prop(self, 'isUseGPLNotice', text='GPL Notice')
-        layout.prop(self, 'isUseSceneProps', text='Scene Props')
-        layout.prop(self, 'isUseMenuFunc', text='Menu Func')
-        layout.prop(self, 'isUseKeymap', text='Keymap')
+        col = layout.column(align = True)
+        col = col.box()
+        col.label(text='Misc ')
+        col.prop(self, 'isUseGPLNotice', text='GPL Notice')
+        col.prop(self, 'isUseSceneProps', text='Scene Props')
+        col.prop(self, 'isUseMenuFunc', text='Menu Func')
+        col.prop(self, 'isUseKeymap', text='Keymap')
         #---
         layout.separator()
 
