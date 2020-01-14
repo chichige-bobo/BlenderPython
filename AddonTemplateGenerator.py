@@ -8,7 +8,7 @@ bl_info = {
     "warning": "",
     "wiki_url": "",
     "tracker_url": "",
-    "category": "Development"}
+    "category": "Text Editor"}
 
 # LET USERS TO MANIPULATE AFTER GENERATED, NOT COMPLETE AT DIALOG
 import bpy
