@@ -1,6 +1,6 @@
 bl_info = {
     "name": "Addon Template Generator",
-    "author": "chichige-bobo",
+    "author": "chichige-bobo, tintwotin",
     "version": (1, 0, 1),
     "blender": (2, 80, 0),
     "location": "TextEditor > Templates > AddonTemplateGenerator, TextEditor > PropertiesBar > AddSnippet",
